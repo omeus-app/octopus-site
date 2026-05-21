@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lost? — octopus</title>
+    <link rel="icon" type="image/png" href="/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #FDFAF6;
+            --ink: #1C1917;
+            --ink-soft: #57534E;
+            --brand: #E06C2B;
+            --brand-deep: #9B3D12;
+            --serif: 'Cormorant Garamond', 'Georgia', serif;
+            --sans: 'Inter', -apple-system, sans-serif;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: var(--bg);
+            font-family: var(--serif);
+            text-align: center;
+            padding: 2rem;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .lost-container {
+            max-width: 400px;
+        }
+
+        .lost-icon {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .lost-title {
+            font-size: 2rem;
+            font-weight: 500;
+            color: var(--ink);
+            margin-bottom: 0.5rem;
+        }
+
+        .lost-subtitle {
+            font-size: 1.2rem;
+            font-style: italic;
+            color: var(--brand);
+            margin-bottom: 2rem;
+        }
+
+        .lost-text {
+            font-size: 1rem;
+            color: var(--ink-soft);
+            line-height: 1.7;
+            margin-bottom: 2rem;
+        }
+
+        .lost-link {
+            font-family: var(--sans);
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #FDF8F4;
+            background: var(--brand-deep);
+            padding: 0.8rem 2rem;
+            border-radius: 50px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+
+        .lost-link:hover {
+            background: var(--brand);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(224, 108, 43, 0.25);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="lost-container">
+        <div class="lost-icon">🐙</div>
+        <h1 class="lost-title">Gloriously Lost</h1>
+        <p class="lost-subtitle">That's usually the point — but not here.</p>
+        <p class="lost-text">
+            This page doesn't exist. But the reading experience does.
+        </p>
+        <a href="/" class="lost-link">← Back to octopus</a>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>octopus — Try the Reading Engine</title>
+    <meta name="description" content="Experience the octopus reading engine with Alice's Adventures in Wonderland. Tap sentences, discover meanings, and feel what deep reading should feel like.">
+    <meta property="og:title" content="octopus — Try the Reading Engine">
+    <meta property="og:description" content="Read Alice in Wonderland through a reading engine designed for deep comprehension. Try it live.">
+    <meta property="og:image" content="og-image.png">
+    <link rel="icon" type="image/png" href="logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap');
+
+        :root {
+            --bg:          #FDFAF6;
+            --ink:         #1C1917;
+            --ink-soft:    #57534E;
+            --ink-ghost:   #A8A29E;
+            --brand:       #E06C2B;
+            --brand-deep:  #9B3D12;
+            --brand-glow:  rgba(224, 108, 43, 0.12);
+            --rule:        rgba(0, 0, 0, 0.06);
+            --serif:       'Cormorant Garamond', 'Georgia', serif;
+            --sans:        'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body { 
+            height: 100%; 
+            background: var(--bg); 
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ─── Top Bar ─── */
+        .demo-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.2rem;
+            height: 48px;
+            background: rgba(253, 250, 246, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--rule);
+        }
+
+        .demo-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .demo-bar-logo {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+        }
+
+        .demo-bar-home {
+            font-family: var(--sans);
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            color: var(--ink-ghost);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .demo-bar-home:hover {
+            color: var(--brand);
+        }
+
+        .demo-bar-badge {
+            font-family: var(--sans);
+            font-size: 0.6rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--brand-deep);
+            background: var(--brand-glow);
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+
+        /* ─── Intro Overlay ─── */
+        .demo-intro {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(253, 250, 246, 0.97);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            opacity: 1;
+            transition: opacity 0.6s var(--ease-out-expo);
+        }
+
+        .demo-intro.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .demo-intro-content {
+            max-width: 440px;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .demo-intro-icon {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .demo-intro-title {
+            font-family: var(--serif);
+            font-size: 1.8rem;
+            font-weight: 500;
+            color: var(--ink);
+            margin-bottom: 1rem;
+        }
+
+        .demo-intro-text {
+            font-family: var(--serif);
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: var(--ink-soft);
+            margin-bottom: 0.8rem;
+        }
+
+        .demo-intro-hints {
+            list-style: none;
+            padding: 0;
+            margin: 1.5rem 0 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .demo-intro-hints li {
+            font-family: var(--sans);
+            font-size: 0.8rem;
+            color: var(--ink-soft);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .demo-intro-hints .hint-icon {
+            font-size: 1rem;
+        }
+
+        .demo-intro-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: var(--sans);
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #FDF8F4;
+            background: var(--brand-deep);
+            padding: 0.9rem 2.2rem;
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(155, 61, 18, 0.2);
+            transition: all 0.3s var(--ease-out-expo);
+        }
+
+        .demo-intro-btn:hover {
+            background: var(--brand);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(224, 108, 43, 0.3);
+        }
+
+        /* ─── Reading Engine Frame ─── */
+        .demo-frame {
+            position: fixed;
+            top: 48px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: none;
+        }
+
+        /* ─── Bottom CTA Banner ─── */
+        .demo-bottom-cta {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 9998;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            padding: 0.8rem 1.2rem;
+            background: rgba(28, 20, 16, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transform: translateY(100%);
+            transition: transform 0.6s var(--ease-out-expo);
+        }
+
+        .demo-bottom-cta.visible {
+            transform: translateY(0);
+        }
+
+        .demo-bottom-text {
+            font-family: var(--sans);
+            font-size: 0.8rem;
+            color: rgba(253, 248, 244, 0.7);
+        }
+
+        .demo-bottom-link {
+            font-family: var(--sans);
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            color: var(--brand);
+            text-decoration: none;
+            padding: 0.4rem 1rem;
+            border: 1px solid rgba(224, 108, 43, 0.3);
+            border-radius: 20px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .demo-bottom-link:hover {
+            background: rgba(224, 108, 43, 0.15);
+            border-color: var(--brand);
+        }
+
+        @media (max-width: 480px) {
+            .demo-bottom-cta {
+                flex-direction: column;
+                gap: 0.5rem;
+                padding: 0.8rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Top Bar -->
+    <div class="demo-bar">
+        <div class="demo-bar-left">
+            <img src="logo.png" alt="Octopus" class="demo-bar-logo">
+            <a href="index.html" class="demo-bar-home">← Back to Home</a>
+        </div>
+        <div class="demo-bar-badge">Live Demo</div>
+    </div>
+
+    <!-- Intro Overlay -->
+    <div class="demo-intro" id="demo-intro">
+        <div class="demo-intro-content">
+            <div class="demo-intro-icon">📖</div>
+            <h1 class="demo-intro-title">Welcome to the Reading Engine</h1>
+            <p class="demo-intro-text">
+                You're about to read <em>Alice's Adventures in Wonderland</em> 
+                through a new kind of reading experience.
+            </p>
+            <ul class="demo-intro-hints">
+                <li><span class="hint-icon">👆</span> Tap a sentence to explore it</li>
+                <li><span class="hint-icon">⬇️</span> Pull down for story context</li>
+                <li><span class="hint-icon">⬆️</span> Pull up to see your reflections</li>
+                <li><span class="hint-icon">✍️</span> Long-press to add your own thoughts</li>
+            </ul>
+            <button class="demo-intro-btn" id="demo-start-btn" onclick="startDemo()">
+                Begin Reading →
+            </button>
+        </div>
+    </div>
+
+    <!-- Reading Engine (iframe) -->
+    <iframe src="engine/reading-engine.html" class="demo-frame" id="demo-frame" title="octopus reading engine demo"></iframe>
+
+    <!-- Bottom CTA -->
+    <div class="demo-bottom-cta" id="demo-bottom-cta">
+        <span class="demo-bottom-text">Like what you see? We're launching soon.</span>
+        <a href="https://omeus.substack.com/subscribe" target="_blank" rel="noopener" class="demo-bottom-link">
+            Get Early Access ✉️
+        </a>
+    </div>
+
+    <script>
+    function startDemo() {
+        const intro = document.getElementById('demo-intro');
+        intro.classList.add('hidden');
+        setTimeout(() => { intro.style.display = 'none'; }, 600);
+
+        // Show the bottom CTA after 30 seconds of reading
+        setTimeout(() => {
+            document.getElementById('demo-bottom-cta').classList.add('visible');
+        }, 30000);
+    }
+    </script>
+</body>
+
+</html>

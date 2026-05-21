@@ -1,0 +1,2576 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Octopus Reading Engine — Inline Variant</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap');
+
+        :root {
+            --bg: #FAF8F5;
+            --ink: #1C1917;
+            --ink-soft: #57534E;
+            --ink-ghost: #A8A29E;
+            --highlight: rgba(180, 160, 120, 0.15);
+            --highlight-active: rgba(180, 160, 120, 0.28);
+            --rule: rgba(0, 0, 0, 0.06);
+
+            --blue-deep: #1E3A5F;
+            --blue-mid: #4A7FB5;
+            --blue-pale: #A8CCE8;
+            --blue-light: #D6E8F7;
+            --blue-ghost: #EBF3FA;
+
+            --yellow-deep: #5C4E00;
+            --yellow-mid: #A89200;
+            --yellow-pale: #D4C560;
+            --yellow-light: #F5EFD0;
+            --yellow-ghost: #FAF7E8;
+
+            --green-deep: #1B4332;
+            --green-mid: #52796F;
+            --green-pale: #95D5B2;
+            --green-light: #D8F3DC;
+            --green-ghost: #EDF6EE;
+
+            --amber: #C4A35A;
+            --amber-soft: #A08840;
+
+            --serif: 'Cormorant Garamond', 'Georgia', serif;
+            --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-spring: cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: var(--serif);
+            font-size: 20px;
+            line-height: 1.75;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .hidden { display: none !important; }
+
+        /* ═══════════════════════════════════════
+           ZERO-UI READING CANVAS
+           ═══════════════════════════════════════ */
+
+        #reading-surface {
+            position: relative;
+            min-height: 100vh;
+            touch-action: pan-y;
+            /* OS Overrides for Long Press */
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            /* Rubber-band Snap Back */
+            transition: transform 0.4s var(--ease-spring);
+        }
+
+        /* Disables transition so the container tracks finger instantly */
+        #reading-surface.pulling {
+            transition: none;
+        }
+
+        #aru-container {
+            padding: 15vh 32px 20vh 32px;
+            max-width: 620px;
+            margin: 0 auto;
+        }
+
+        /* ═══════════════════════════════════════
+           IN-PAGE CONTEXT BLOCKS
+           ═══════════════════════════════════════ */
+
+        .in-page-context {
+            margin-bottom: 48px;
+            padding-bottom: 32px;
+            border-bottom: 1px solid var(--rule);
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            animation: fadeInDown 0.6s var(--ease-out-expo) forwards;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .context-section h2 {
+            font-family: var(--sans); font-size: 10px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 3px; color: var(--ink-ghost); border-bottom: 1px solid var(--rule);
+            padding-bottom: 12px; margin-bottom: 20px;
+        }
+
+        .context-prose { font-family: var(--serif); font-size: 18px; line-height: 1.8; color: var(--ink-soft); }
+
+        .entity-list { list-style: none; padding: 0; margin: 20px 0 0 0; }
+        .entity-list li {
+            padding: 14px 0; border-bottom: 1px solid var(--rule); font-family: var(--sans);
+            font-size: 13px; line-height: 1.6; color: var(--ink-soft);
+        }
+        .entity-name { font-weight: 600; color: var(--ink); font-size: 14px; }
+        .entity-tag {
+            font-size: 9px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+            padding: 2px 8px; border-radius: 3px; margin-left: 8px; vertical-align: middle;
+        }
+        .entity-tag.history { background: var(--blue-light); color: var(--blue-deep); }
+        .entity-tag.new { background: var(--green-light); color: var(--green-deep); }
+
+
+        /* ═══════════════════════════════════════
+           PROSE & ATU STYLING
+           ═══════════════════════════════════════ */
+
+        .atu {
+            margin-bottom: 0;
+            text-indent: 0;
+            padding: 0.4em 0;
+            position: relative;
+            transition: filter 0.4s var(--ease-out-expo), opacity 0.4s var(--ease-out-expo);
+        }
+
+        .atu + .atu { text-indent: 1.8em; }
+        .atu.is-header { text-indent: 0; font-weight: 500; font-size: 0.95em; color: var(--ink-soft); }
+        .atu.is-signature { text-indent: 0; margin-top: 1.5em; }
+
+        .sentence {
+            cursor: pointer;
+            border-radius: 2px;
+            transition: background-color 0.25s ease;
+            padding: 1px 0;
+        }
+
+        .sentence.highlighted { background-color: var(--highlight); }
+
+        .atu.pressing {
+            background: radial-gradient(ellipse at var(--press-x, 50%) var(--press-y, 50%), rgba(0,0,0,0.03) 0%, transparent 70%);
+        }
+
+        /* ═══════════════════════════════════════
+           PULL INDICATORS
+           ═══════════════════════════════════════ */
+
+        .pull-indicator {
+            position: fixed;
+            left: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 40;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            font-family: var(--sans);
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--ink-ghost);
+        }
+
+        .pull-indicator.top { top: 0; height: 60px; transform: translateY(-100%); }
+        .pull-indicator.bottom { bottom: 0; height: 60px; transform: translateY(100%); }
+
+        .pull-indicator.visible { opacity: 1; transform: translateY(0); }
+        .pull-indicator.ready { color: var(--ink-soft); }
+
+        /* ═══════════════════════════════════════
+           FULLSCREEN SIDECAR — 60 / 40
+           ═══════════════════════════════════════ */
+
+        #sidecar-overlay {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 620px;
+            z-index: 200;
+            background: var(--bg);
+            display: none;
+            flex-direction: column;
+            opacity: 0;
+            transition: opacity 0.35s var(--ease-out-expo);
+        }
+
+        #sidecar-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        #sidecar-source {
+            height: 60%;
+            overflow-y: auto;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--rule);
+            position: relative;
+            scroll-behavior: smooth;
+        }
+
+        #sidecar-source-label {
+            font-family: var(--sans);
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--ink-ghost);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        #sidecar-close {
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+            cursor: pointer;
+            padding: 4px 0;
+            transition: color 0.2s ease;
+        }
+
+        #sidecar-text {
+            font-family: var(--serif);
+            font-size: 18px;
+            line-height: 1.8;
+            color: var(--ink);
+        }
+
+        .source-legend {
+            display: flex;
+            gap: 14px;
+            margin-top: 14px;
+            padding-top: 10px;
+            border-top: 1px solid var(--rule);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-family: var(--sans);
+            font-size: 9px;
+            font-weight: 500;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: var(--ink-ghost);
+        }
+
+        .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+        .legend-dot.entity { background: var(--blue-mid); }
+        .legend-dot.word { background: var(--yellow-mid); }
+        .legend-dot.idiom { background: var(--green-mid); }
+
+        .cw {
+            cursor: pointer;
+            border-radius: 3px;
+            padding: 0 3px;
+            margin: 0 -1px;
+            transition: all 0.2s ease;
+            text-decoration-style: dotted;
+            text-decoration-thickness: 1.5px;
+            text-underline-offset: 3px;
+        }
+
+        .cw:active { filter: brightness(0.88); }
+
+        .cw.selected {
+            filter: brightness(0.85);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+            transform: scale(1.02);
+        }
+
+        .cw.t-entity.d-lore        { background: rgba(30,58,95,0.18); color: var(--blue-deep); text-decoration-color: var(--blue-deep); }
+        .cw.t-entity.d-contextual   { background: rgba(74,127,181,0.15); color: var(--blue-mid); text-decoration-color: var(--blue-mid); }
+        .cw.t-entity.d-universal    { background: rgba(214,232,247,0.5); color: var(--blue-deep); text-decoration-color: var(--blue-pale); }
+
+        .cw.t-word.d-lore           { background: rgba(92,78,0,0.15); color: var(--yellow-deep); text-decoration-color: var(--yellow-deep); }
+        .cw.t-word.d-contextual     { background: rgba(168,146,0,0.12); color: var(--yellow-mid); text-decoration-color: var(--yellow-mid); }
+        .cw.t-word.d-universal      { background: rgba(245,239,208,0.6); color: var(--yellow-deep); text-decoration-color: var(--yellow-pale); }
+
+        .cw.t-idiom.d-lore          { background: rgba(27,67,50,0.15); color: var(--green-deep); text-decoration-color: var(--green-deep); }
+        .cw.t-idiom.d-contextual    { background: rgba(82,121,111,0.12); color: var(--green-mid); text-decoration-color: var(--green-mid); }
+        .cw.t-idiom.d-universal     { background: rgba(216,243,220,0.6); color: var(--green-deep); text-decoration-color: var(--green-pale); }
+
+        #sidecar-tabs-area {
+            height: 40%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .tab-panels-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab-bar {
+            display: flex;
+            flex-shrink: 0;
+            border-bottom: 1px solid var(--rule);
+            background: #FAFAF8;
+        }
+
+        .tab-btn {
+            flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px 8px;
+            cursor: pointer; font-family: var(--sans); font-size: 11px; font-weight: 500; letter-spacing: 1px;
+            text-transform: uppercase; color: var(--ink-ghost); border-bottom: 2px solid transparent;
+            transition: color 0.25s ease, border-color 0.25s ease; position: relative;
+        }
+
+        .tab-btn.active { color: var(--ink); border-bottom-color: var(--ink); }
+
+        .tab-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+        .tab-btn .fade-ring {
+            position: absolute; top: 6px; right: 12px; width: 6px; height: 6px; border-radius: 50%;
+            background: var(--amber); opacity: 0; transition: opacity 0.3s ease;
+        }
+
+        .tab-btn .fade-ring.pulsing { opacity: 1; animation: subtlePulse 1.2s ease infinite; }
+
+        @keyframes subtlePulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+        @keyframes fadeTab { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+        .tab-panel {
+            position: absolute; inset: 0; overflow-y: auto; padding: 16px 24px;
+            opacity: 0; pointer-events: none; transition: opacity 0.6s ease;
+        }
+
+        .tab-panel.active { opacity: 1; pointer-events: all; }
+
+        .ref-note {
+            display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+            padding: 8px 0; border-bottom: 1px solid var(--rule); font-family: var(--serif);
+            font-size: 14px; line-height: 1.5; color: var(--ink-soft); font-style: italic;
+        }
+
+        .ref-note-text { flex: 1; }
+        .ref-note-actions { flex-shrink: 0; display: flex; gap: 4px; }
+        .ref-note-actions span {
+            font-family: var(--sans); font-size: 10px; color: var(--ink-ghost); cursor: pointer;
+            padding: 2px 6px; border-radius: 3px; transition: color 0.2s ease, background 0.2s ease;
+        }
+
+        .ref-input-row { display: flex; gap: 8px; align-items: flex-end; margin-top: 8px; }
+
+        .ref-textarea {
+            flex: 1; background: rgba(0, 0, 0, 0.03); border: 1px solid var(--rule); border-radius: 8px;
+            padding: 10px 14px; font-family: var(--serif); font-size: 15px; line-height: 1.5; color: var(--ink);
+            resize: none; outline: none; min-height: 40px; max-height: 80px; transition: border-color 0.2s ease;
+        }
+
+        .ref-save-btn {
+            background: var(--ink); border: none; color: var(--bg); font-family: var(--sans);
+            font-size: 11px; font-weight: 600; letter-spacing: 0.5px; padding: 10px 16px;
+            border-radius: 8px; cursor: pointer; transition: opacity 0.15s ease, transform 0.15s ease; white-space: nowrap;
+        }
+
+        .def-empty { font-family: var(--serif); font-size: 15px; font-style: italic; color: var(--ink-ghost); line-height: 1.7; padding: 8px 0; }
+        .def-content { animation: fadeTab 0.3s ease forwards; }
+        .def-word { font-family: var(--sans); font-weight: 600; font-size: 17px; color: var(--ink); margin-bottom: 4px; }
+        .def-type-badge {
+            display: inline-block; font-family: var(--sans); font-size: 9px; font-weight: 600;
+            letter-spacing: 1.5px; text-transform: uppercase; padding: 3px 10px; border-radius: 4px; margin-bottom: 10px;
+        }
+        .def-meaning { font-family: var(--serif); font-size: 16px; line-height: 1.7; color: var(--ink-soft); }
+
+        .def-fade-bar {
+            position: absolute; bottom: 0; left: 0; height: 2px; background: var(--ink-ghost);
+            width: 100%; transform-origin: right; transform: scaleX(1); opacity: 0; transition: opacity 0.4s ease;
+        }
+
+        .def-fade-bar.counting { opacity: 0.5; transform: scaleX(0); transition: opacity 0.4s ease, transform 5s linear; }
+
+        .intuition-placeholder { font-family: var(--serif); font-size: 15px; font-style: italic; color: var(--ink-ghost); line-height: 1.7; padding: 8px 0; }
+        .intuition-content { animation: fadeTab 0.4s ease forwards; }
+        .intuition-label { font-family: var(--sans); font-size: 9px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--amber-soft); margin-bottom: 10px; }
+        .intuition-text { font-family: var(--serif); font-size: 16px; line-height: 1.75; color: var(--ink); }
+
+        /* ═══════════════════════════════════════
+           FULL-PAGE REFLECTION PAGE
+           ═══════════════════════════════════════ */
+
+        #reflection-page {
+            position: fixed; inset: 0; background: var(--bg); overflow-y: auto; z-index: 50; touch-action: pan-y;
+        }
+
+        .rp-container { max-width: 620px; margin: 0 auto; padding: 48px 28px 30vh 28px; }
+        .rp-title { font-family: var(--serif); font-size: 28px; font-weight: 500; color: var(--ink); margin: 0 0 4px 0; }
+        .rp-subtitle { font-family: var(--sans); font-size: 10px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-ghost); margin-bottom: 32px; }
+
+        .rp-aru-card { margin-bottom: 16px; padding: 16px 20px; background: rgba(180,160,120,0.06); border-radius: 8px; border-left: 4px solid var(--amber); }
+        .rp-aru-card-label { font-family: var(--sans); font-size: 9px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--amber-soft); margin-bottom: 6px; }
+        .rp-aru-card-note { font-family: var(--serif); font-size: 16px; line-height: 1.6; color: var(--ink); }
+        .rp-aru-card-actions { display: flex; gap: 8px; margin-top: 8px; }
+        .rp-aru-card-actions span { font-family: var(--sans); font-size: 11px; color: var(--ink-ghost); cursor: pointer; transition: color 0.2s ease; }
+
+        .rp-aru-input-row { display: flex; gap: 8px; align-items: flex-end; margin-top: 12px; margin-bottom: 24px; }
+        .rp-divider { height: 1px; background: var(--rule); margin: 24px 0; }
+
+        .rp-atu-group { margin-bottom: 16px; padding: 14px 16px; background: rgba(0,0,0,0.02); border-radius: 8px; border-left: 3px solid var(--rule); transition: background 0.2s ease, border-color 0.2s ease; }
+        .rp-atu-group.expanded { border-left-color: var(--ink-soft); background: rgba(0,0,0,0.04); }
+        .rp-atu-header { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .rp-atu-snippet { flex: 1; font-family: var(--serif); font-size: 12px; line-height: 1.4; color: var(--ink-ghost); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .rp-atu-count { font-family: var(--sans); font-size: 9px; font-weight: 600; background: var(--rule); color: var(--ink-soft); padding: 2px 7px; border-radius: 10px; flex-shrink: 0; }
+        .rp-atu-chevron { font-family: var(--sans); font-size: 12px; color: var(--ink-ghost); transition: transform 0.2s ease; flex-shrink: 0; }
+        .rp-atu-group.expanded .rp-atu-chevron { transform: rotate(90deg); }
+        .rp-atu-body { display: none; margin-top: 12px; }
+        .rp-atu-group.expanded .rp-atu-body { display: block; }
+        .rp-atu-full-text { font-family: var(--serif); font-size: 14px; line-height: 1.6; color: var(--ink-ghost); margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--rule); }
+        .rp-atu-note { font-family: var(--serif); font-size: 15px; line-height: 1.55; color: var(--ink-soft); padding: 6px 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+        .rp-atu-note + .rp-atu-note { border-top: 1px solid var(--rule); margin-top: 4px; padding-top: 8px; }
+        .rp-atu-note-text { flex: 1; }
+        .rp-atu-note-actions { flex-shrink: 0; display: flex; gap: 4px; }
+        .rp-atu-note-actions span { font-family: var(--sans); font-size: 10px; color: var(--ink-ghost); cursor: pointer; padding: 2px 4px; border-radius: 3px; }
+        .rp-empty { font-family: var(--serif); font-size: 16px; color: var(--ink-ghost); font-style: italic; padding: 20px 0; }
+        .rp-edit-row { display: flex; gap: 8px; align-items: flex-end; margin-top: 4px; }
+
+        /* ═══════════════════════════════════════
+           PROGRESS DOTS
+           ═══════════════════════════════════════ */
+
+        #progress-bar {
+            position: fixed; right: 8px; top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; gap: 3px; opacity: 0;
+            transition: opacity 0.6s ease; z-index: 30; pointer-events: none;
+        }
+        #progress-bar.visible { opacity: 1; }
+        .progress-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-ghost); transition: background 0.3s ease, transform 0.3s ease; }
+        .progress-dot.active { background: var(--ink-soft); transform: scale(1.5); }
+
+        ::-webkit-scrollbar { width: 0; background: transparent; }
+        ::selection { background: rgba(180, 160, 120, 0.3); }
+    </style>
+
+    <style id="dynamic-theme">
+        :root {
+            --bg-light: #F8F8F0;
+            --ink-light: #334455;
+            --bg-dark: #1A2B3C;
+            --ink-dark: #E0E0D0;
+            --bg: var(--bg-light);
+            --ink: var(--ink-light);
+            --serif: 'Garamond', 'Georgia', serif;
+            --sans: 'Inter', -apple-system, sans-serif;
+            --custom-line-height: 1.6;
+        }
+        body {
+            background: var(--bg);
+            color: var(--ink);
+            font-family: var(--serif);
+            line-height: var(--custom-line-height);
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+        body.dark-mode {
+            --bg: var(--bg-dark);
+            --ink: var(--ink-dark);
+            --ink-soft: #A8A29E;
+            --ink-ghost: #57534E;
+            --rule: rgba(255, 255, 255, 0.1);
+        }
+        #theme-toggle-btn {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 9999;
+            background: var(--ink);
+            color: var(--bg);
+            font-family: var(--sans);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 8px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            user-select: none;
+        }
+    </style>
+    
+    <script>
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        const btn = document.getElementById('theme-toggle-btn');
+        if(document.body.classList.contains('dark-mode')) {
+            btn.textContent = 'Light Mode';
+        } else {
+            btn.textContent = 'Dark Mode';
+        }
+    }
+    </script>
+    </head>
+    
+
+<body>
+<div id="theme-toggle-btn" onclick="toggleDarkMode()">Dark Mode</div>
+
+
+    <div class="pull-indicator top" id="pull-indicator-top"><span id="pull-top-text">Pull for context</span></div>
+    <div class="pull-indicator bottom" id="pull-indicator-bottom"><span id="pull-bottom-text">Pull to reflect</span></div>
+    <div id="progress-bar"></div>
+
+    <div id="reading-surface">
+        <div id="aru-container">
+
+            <div id="in-page-context-global" class="in-page-context hidden">
+                <div class="context-section">
+                    <h2>The Story So Far</h2>
+                    <div id="context-global-paragraphs"></div>
+                </div>
+            </div>
+
+            <div id="in-page-context-local" class="in-page-context hidden">
+                <div class="context-section">
+                    <h2>Session Context</h2>
+                    <p class="context-prose" id="context-local-summary"></p>
+                    <h2 style="margin-top:36px">Entities Encountered</h2>
+                    <ul class="entity-list" id="context-local-entities"></ul>
+                </div>
+            </div>
+            </div>
+            <div id="base-text-container">
+<p class="atu" data-opus-lineage="86000" data-opus-type="BP" data-wc="12"><span class="sentence">“But she must have a prize herself, you know,” said the Mouse.</span> </p>
+<p class="atu" data-opus-lineage="87000" data-opus-type="BP" data-wc="21"><span class="sentence">“Of course,” the Dodo replied very gravely.</span> <span class="sentence">“What else have you got in your pocket?</span> <span class="sentence">” he went on, turning to Alice.</span> </p>
+<p class="atu" data-opus-lineage="88000" data-opus-type="BP" data-wc="6"><span class="sentence">“Only a thimble,” said Alice sadly.</span> </p>
+<p class="atu" data-opus-lineage="89000" data-opus-type="DL" data-wc="7"><span class="sentence">“Hand it over here,” said the Dodo.</span> </p>
+<p class="atu" data-opus-lineage="90000" data-opus-type="BP" data-wc="35"><span class="sentence">Then they all crowded round her once more, while the Dodo solemnly presented the thimble, saying “We beg your acceptance of this elegant thimble;” and, when it had finished this short speech, they all cheered.</span> </p>
+<p class="atu" data-opus-lineage="91000" data-opus-type="BP" data-wc="43"><span class="sentence">Alice thought the whole thing very absurd, but they all looked so grave that she did not dare to laugh; and, as she could not think of anything to say, she simply bowed, and took the thimble, looking as solemn as she could.</span> </p>
+<p class="atu" data-opus-lineage="92000" data-opus-type="BP" data-wc="61"><span class="sentence">The next thing was to eat the comfits: this caused some noise and confusion, as the large birds complained that they could not taste theirs, and the small ones choked and had to be patted on the back.</span> <span class="sentence">However, it was over at last, and they sat down again in a ring, and begged the Mouse to tell them something more.</span> </p>
+<p class="atu" data-opus-lineage="93000" data-opus-type="BP" data-wc="32"><span class="sentence">“You promised to tell me your history, you know,” said Alice, “and why it is you hate—C and D,” she added in a whisper, half afraid that it would be offended again.</span> </p>
+<p class="atu" data-opus-lineage="94000" data-opus-type="BP" data-wc="16"><span class="sentence">“Mine is a long and a sad tale!</span> <span class="sentence">” said the Mouse, turning to Alice, and sighing.</span> </p>
+<p class="atu" data-opus-lineage="95000" data-opus-type="BP" data-wc="46"><span class="sentence">“It is a long tail, certainly,” said Alice, looking down with wonder at the Mouse’s tail; “but why do you call it sad?</span> <span class="sentence">” And she kept on puzzling about it while the Mouse was speaking, so that her idea of the tale was something like this:—</span> </p>
+<p class="atu" data-opus-lineage="96000" data-opus-type="PS" data-wc="80"><span class="sentence">“Fury said to a
+         mouse, That he
+        met in the
+       house,
+     ‘Let us
+      both go to
+       law: I will
+        prosecute
+         you.</span> <span class="sentence">—Come,
+           I’ll take no
+           denial; We
+          must have a
+        trial: For
+      really this
+     morning I’ve
+    nothing
+    to do.</span> <span class="sentence">’
+      Said the
+      mouse to the
+       cur, ‘Such
+        a trial,
+         dear sir,
+            With
+          no jury
+        or judge,
+       would be
+      wasting
+      our
+      breath.</span> <span class="sentence">’
+        ‘I’ll be
+        judge, I’ll
+         be jury,’
+             Said
+         cunning
+          old Fury:
+          ‘I’ll
+          try the
+            whole
+            cause,
+              and
+           condemn
+           you
+          to
+           death.</span> <span class="sentence">’”</span> </p>
+<p class="atu" data-opus-lineage="97000" data-opus-type="BP" data-wc="15"><span class="sentence">“You are not attending!</span> <span class="sentence">” said the Mouse to Alice severely.</span> <span class="sentence">“What are you thinking of?</span> <span class="sentence">”</span> </p>
+<p class="atu" data-opus-lineage="98000" data-opus-type="BP" data-wc="17"><span class="sentence">“I beg your pardon,” said Alice very humbly: “you had got to the fifth bend, I think?</span> <span class="sentence">”</span> </p>
+<p class="atu" data-opus-lineage="99000" data-opus-type="BP" data-wc="11"><span class="sentence">“I had not!</span> <span class="sentence">” cried the Mouse, sharply and very angrily.</span> </p>
+<p class="atu" data-opus-lineage="100000" data-opus-type="BP" data-wc="23"><span class="sentence">“A knot!</span> <span class="sentence">” said Alice, always ready to make herself useful, and looking anxiously about her.</span> <span class="sentence">“Oh, do let me help to undo it!</span> <span class="sentence">”</span> </p>
+<p class="atu" data-opus-lineage="101000" data-opus-type="BP" data-wc="22"><span class="sentence">“I shall do nothing of the sort,” said the Mouse, getting up and walking away.</span> <span class="sentence">“You insult me by talking such nonsense!</span> <span class="sentence">”</span> </p>
+<p class="atu" data-opus-lineage="102000" data-opus-type="DL" data-wc="14"><span class="sentence">“I didn’t mean it!</span> <span class="sentence">” pleaded poor Alice.</span> <span class="sentence">“But you’re so easily offended, you know!</span> <span class="sentence">”</span> </p>
+<p class="atu" data-opus-lineage="103000" data-opus-type="BP" data-wc="6"><span class="sentence">The Mouse only growled in reply.</span> </p>
+<p class="atu" data-opus-lineage="104000" data-opus-type="BP" data-wc="34"><span class="sentence">“Please come back and finish your story!</span> <span class="sentence">” Alice called after it; and the others all joined in chorus, “Yes, please do!</span> <span class="sentence">” but the Mouse only shook its head impatiently, and walked a little quicker.</span> </p>
+<p class="atu" data-opus-lineage="105000" data-opus-type="BP" data-wc="65"><span class="sentence">“What a pity it wouldn’t stay!</span> <span class="sentence">” sighed the Lory, as soon as it was quite out of sight; and an old Crab took the opportunity of saying to her daughter “Ah, my dear!</span> <span class="sentence">Let this be a lesson to you never to lose your temper!</span> <span class="sentence">” “Hold your tongue, Ma!</span> <span class="sentence">” said the young Crab, a little snappishly.</span> <span class="sentence">“You’re enough to try the patience of an oyster!</span> <span class="sentence">”</span> </p>
+<p class="atu" data-opus-lineage="106000" data-opus-type="BP" data-wc="23"><span class="sentence">“I wish I had our Dinah here, I know I do!</span> <span class="sentence">” said Alice aloud, addressing nobody in particular.</span> <span class="sentence">“She’d soon fetch it back!</span> <span class="sentence">”</span> </p>
+<p class="atu" data-opus-lineage="107000" data-opus-type="BP" data-wc="15"><span class="sentence">“And who is Dinah, if I might venture to ask the question?</span> <span class="sentence">” said the Lory.</span> </p>
+<p class="atu" data-opus-lineage="108000" data-opus-type="BP" data-wc="51"><span class="sentence">Alice replied eagerly, for she was always ready to talk about her pet: “Dinah’s our cat.</span> <span class="sentence">And she’s such a capital one for catching mice you can’t think!</span> <span class="sentence">And oh, I wish you could see her after the birds!</span> <span class="sentence">Why, she’ll eat a little bird as soon as look at it!</span> <span class="sentence">”</span> </p>
+<p class="atu" data-opus-lineage="109000" data-opus-type="BP" data-wc="76"><span class="sentence">This speech caused a remarkable sensation among the party.</span> <span class="sentence">Some of the birds hurried off at once: one old Magpie began wrapping itself up very carefully, remarking, “I really must be getting home; the night-air doesn’t suit my throat!</span> <span class="sentence">” and a Canary called out in a trembling voice to its children, “Come away, my dears!</span> <span class="sentence">It’s high time you were all in bed!</span> <span class="sentence">” On various pretexts they all moved off, and Alice was soon left alone.</span> </p>
+<p class="atu" data-opus-lineage="110000" data-opus-type="BP" data-wc="98"><span class="sentence">“I wish I hadn’t mentioned Dinah!</span> <span class="sentence">” she said to herself in a melancholy tone.</span> <span class="sentence">“Nobody seems to like her, down here, and I’m sure she’s the best cat in the world!</span> <span class="sentence">Oh, my dear Dinah!</span> <span class="sentence">I wonder if I shall ever see you any more!</span> <span class="sentence">” And here poor Alice began to cry again, for she felt very lonely and low-spirited.</span> <span class="sentence">In a little while, however, she again heard a little pattering of footsteps in the distance, and she looked up eagerly, half hoping that the Mouse had changed his mind, and was coming back to finish his story.</span> </p>
+<p class="atu is-header" data-opus-lineage="111000" data-opus-type="CH" data-wc="9">CHAPTER IV.
+ The Rabbit Sends in a Little Bill</p>
+            </div>
+
+</div>
+    </div>
+
+    <div id="sidecar-overlay">
+        <div id="sidecar-source">
+            <div id="sidecar-source-label">
+                <span>Source Paragraph</span>
+                <span id="sidecar-close" onclick="closeSidecar()">Return</span>
+            </div>
+            <div id="sidecar-text"></div>
+            <div class="source-legend">
+                <div class="legend-item"><span class="legend-dot entity"></span>Entity</div>
+                <div class="legend-item"><span class="legend-dot word"></span>Word</div>
+                <div class="legend-item"><span class="legend-dot idiom"></span>Idiom</div>
+            </div>
+        </div>
+
+        <div id="sidecar-tabs-area">
+            <div class="tab-bar">
+                <div class="tab-btn active" data-tab="reflection" onclick="switchTab('reflection')">
+                    <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    Reflect
+                    <span class="fade-ring" id="reflect-fade-ring"></span>
+                </div>
+                <div class="tab-btn" data-tab="definition" onclick="switchTab('definition')">
+                    <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    Define
+                </div>
+                <div class="tab-btn" data-tab="intuition" onclick="switchTab('intuition')">
+                    <svg viewBox="0 0 24 24"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
+                    Intuit
+                </div>
+            </div>
+
+            <div class="tab-panels-container">
+                <div class="tab-panel active" id="panel-reflection">
+                    <div id="ref-notes-list"></div>
+                    <div class="ref-input-row">
+                        <textarea class="ref-textarea" id="ref-textarea" placeholder="What are you thinking…" rows="1"></textarea>
+                        <button class="ref-save-btn" onclick="saveReflection()">Save</button>
+                    </div>
+                </div>
+                <div class="tab-panel" id="panel-definition">
+                    <div id="def-content"><div class="def-empty">Tap a highlighted word above to see its meaning</div></div>
+                    <div class="def-fade-bar" id="def-fade-bar"></div>
+                </div>
+                <div class="tab-panel" id="panel-intuition">
+                    <div id="intuition-content"><div class="intuition-placeholder">Tap to receive a reading guide for this paragraph</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="reflection-page" class="hidden">
+        <div class="rp-container">
+            <div class="rp-header">
+                <h1 class="rp-title">Reflections</h1>
+                <div class="rp-subtitle">Letter 2 — Archangel</div>
+            </div>
+
+            <div id="rp-aru-section"></div>
+            <div class="rp-aru-input-row">
+                <textarea class="ref-textarea" id="rp-aru-textarea" placeholder="Add a session reflection…" rows="1"></textarea>
+                <button class="ref-save-btn" onclick="saveAruReflection()">Save</button>
+            </div>
+            <div class="rp-divider"></div>
+            <div id="rp-atu-section"></div>
+        </div>
+    </div>
+
+    <script>
+    /*
+     * Octopus Reading Engine — Inline UX Implementation
+     * * This script manages the state, gestures, rubber-band physics, and UI updates for the reading experience.
+     * Order of operations:
+     * 1. Initialize DOM elements (sentence wrapping, progress dots).
+     * 2. Attach touch listeners to handle swipe, pull-to-refresh, and long-press gestures.
+     * 3. Handle data injection for the Sidecar based on knowledge items.
+     * 4. Manage Cross-tab states (Reflection, Definition, Intuition).
+     * 5. Handle inline CRUD operations for user reflections.
+     */
+
+    // #region Data and State
+    const knowledgeDb = {
+    "86000": {
+        "items": [
+            {
+                "name": "you know",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.6,
+                "desc": "A common conversational filler or discourse marker used to seek confirmation, express shared understanding, or simply to fill a pause. In 1865, its usage was similar to modern English, indicating a shared assumption or seeking agreement.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "you know"
+                ],
+                "context_snippet": "a prize herself, you know,\u201d said the Mouse."
+            }
+        ],
+        "intuition": "The Mouse's statement immediately draws attention to the logical inconsistency of Alice giving away all the prizes without reserving one for herself, prompting a question about fairness or the Dodo's initial declaration."
+    },
+    "87000": {
+        "items": [
+            {
+                "name": "gravely",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.6,
+                "desc": "In a serious, solemn, or dignified manner. In 1865, this meaning was well-established, deriving from the Latin 'gravis' meaning 'heavy' or 'serious'.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "gravely"
+                ],
+                "context_snippet": "the Dodo replied very gravely."
+            },
+            {
+                "name": "went on",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.5,
+                "desc": "A phrasal verb meaning to continue speaking or doing something. In this context, it means the Dodo continued his speech.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "he went on"
+                ],
+                "context_snippet": "pocket?\u201d he went on, turning to Alice."
+            }
+        ],
+        "intuition": "The Dodo's immediate follow-up question to Alice, after she has already provided prizes, suggests a persistent expectation or even a sense of entitlement from the Dodo regarding Alice's possessions. It raises questions about the Dodo's understanding of fairness or its perception of Alice's role within the group."
+    },
+    "88000": {
+        "items": [],
+        "intuition": "The immediate follow-up to the Dodo's inquiry about Alice's pockets reveals a stark contrast between the expectation placed upon her as the 'prize-giver' and her actual, limited resources. Her sadness suggests a burden of responsibility or a feeling of inadequacy in fulfilling the Dodo's impromptu decree."
+    },
+    "89000": {
+        "items": [
+            {
+                "name": "Hand it over here",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.6,
+                "desc": "An idiomatic expression meaning to give or surrender something to the speaker, often implying a demand or request for possession. This phrase was common in 19th-century English.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "Hand it over here"
+                ],
+                "context_snippet": "\u201cHand it over here,\u201d said the Dodo."
+            }
+        ],
+        "intuition": "The Dodo's immediate demand for the thimble, after Alice's lament that it was all she had left, suggests a pragmatic, almost transactional approach to the prize-giving, rather than one based on sentiment or fairness."
+    },
+    "90000": {
+        "items": [
+            {
+                "name": "solemnly",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.6,
+                "desc": "In a formal and dignified manner; with deep sincerity or seriousness.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "solemnly"
+                ],
+                "context_snippet": "Dodo solemnly presented the thimble, saying \u201cWe beg"
+            },
+            {
+                "name": "thimble",
+                "column": "word",
+                "type": "Lore",
+                "depth": 0.7,
+                "desc": "A small, hard, pitted cup worn for protection on the finger that pushes the needle in sewing. In the context of the Caucus-race, it is presented as a prize, humorously implying its value as a token of achievement.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "the thimble",
+                    "elegant thimble"
+                ],
+                "context_snippet": "presented the thimble, saying \u201cWe beg your acceptance of this elegant thimble"
+            },
+            {
+                "name": "thimble",
+                "column": "word",
+                "type": "Lore",
+                "depth": 0.7,
+                "desc": "A small, hard, pitted cup worn for protection on the finger that pushes the needle in sewing. In the context of the Caucus-race, it is presented as a prize, humorously implying its value as a token of achievement.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "the thimble",
+                    "elegant thimble"
+                ],
+                "context_snippet": "presented the thimble, saying \u201cWe beg your acceptance of this elegant thimble"
+            },
+            {
+                "name": "We beg your acceptance of",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.8,
+                "desc": "A formal and polite way of asking someone to accept something, often used when presenting a gift or offering. It implies a humble request for the recipient to take the item.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "We beg your acceptance of"
+                ],
+                "context_snippet": "saying \u201cWe beg your acceptance of this elegant thimble;\u201d and, when"
+            }
+        ],
+        "intuition": "The Dodo's actions present a curious inversion of expectations: Alice, who provided all the prizes, now receives her own possession back as a prize. This raises questions about the true value of the 'prize' and the nature of the Dodo's authority."
+    },
+    "91000": {
+        "items": [
+            {
+                "name": "absurd",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.7,
+                "desc": "Wildly unreasonable, illogical, or inappropriate; contrary to all common sense.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "very absurd"
+                ],
+                "context_snippet": "Alice thought the whole thing very absurd, but they all looked"
+            },
+            {
+                "name": "grave",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.6,
+                "desc": "Serious or solemn in manner or appearance; sober.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "looked so grave"
+                ],
+                "context_snippet": "but they all looked so grave that she did not"
+            },
+            {
+                "name": "dare",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.5,
+                "desc": "To have the courage or boldness to do something; to venture or presume.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "did not dare to laugh"
+                ],
+                "context_snippet": "so grave that she did not dare to laugh; and, as"
+            },
+            {
+                "name": "thimble",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.7,
+                "desc": "A small metal or plastic cap with a closed end, worn on the finger to protect it from the needle when sewing.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "took the thimble"
+                ],
+                "context_snippet": "she simply bowed, and took the thimble, looking as solemn"
+            },
+            {
+                "name": "solemn",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.6,
+                "desc": "Formal and dignified; serious and earnest in feeling, tone, or manner.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "as solemn as she could"
+                ],
+                "context_snippet": "took the thimble, looking as solemn as she could."
+            }
+        ],
+        "intuition": "The paragraph highlights Alice's internal conflict between her perception of reality and the social pressures of her current environment. It raises the question of how much one must conform to the absurdities of a situation to maintain social harmony, even when one's own judgment dictates otherwise."
+    },
+    "92000": {
+        "items": [
+            {
+                "name": "comfits",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.7,
+                "desc": "A sweetmeat, typically a nut, seed, or piece of fruit coated with sugar. These were popular confections in the 19th century.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "comfits"
+                ],
+                "context_snippet": "to eat the comfits: this caused some"
+            },
+            {
+                "name": "patted on the back",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.6,
+                "desc": "To strike gently on the back, in this literal context, to help someone who is choking by dislodging an obstruction from their throat. While often used idiomatically for praise or encouragement, here it refers to a physical action to aid breathing.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "patted on the back"
+                ],
+                "context_snippet": "choked and had to be patted on the back."
+            }
+        ],
+        "intuition": "The immediate aftermath of the prize-giving is characterized by a brief, chaotic consumption of the prizes, followed by a collective desire for a return to narrative. This suggests a cyclical pattern where moments of absurdity and physical discomfort are punctuated by attempts to impose order or distraction, often through storytelling, and that the Mouse is seen as a source for this."
+    },
+    "93000": {
+        "items": [
+            {
+                "name": "C and D",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.7,
+                "desc": "In this specific narrative context, 'C and D' are placeholders used by Alice to refer to 'cats' and 'dogs' without explicitly naming them. This is done to avoid offending the Mouse, who has a strong aversion to these animals, a fact Alice learned earlier in their conversation. It functions as a form of verbal evasion or euphemism.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "C and D"
+                ],
+                "context_snippet": "you hate\u2014C and D,\u201d she added in a whisper"
+            },
+            {
+                "name": "C and D",
+                "column": "entity",
+                "type": "New",
+                "depth": 0.6,
+                "desc": "A euphemistic reference to \"Cat\" and \"Dog,\" words that previously caused the Mouse great offense. Alice uses this coded language to avoid upsetting him again.",
+                "phrases": [
+                    "C and D"
+                ],
+                "context_snippet": "hate\u2014C and D,\u201d she added in a whisper"
+            }
+        ],
+        "intuition": "This moment highlights Alice's developing understanding of the arbitrary and often illogical social rules governing Wonderland. Her cautious approach to the Mouse's sensitivities suggests a shift from her initial, more direct interactions, indicating a learning curve in navigating this strange world."
+    },
+    "94000": {
+        "items": [
+            {
+                "name": "tale",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.6,
+                "desc": "A narrative or story, especially one that is imaginative or fictitious. In this context, it refers to the Mouse's personal history or account.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "a sad tale!"
+                ],
+                "context_snippet": "Mine is a long and a sad tale!\u201d said"
+            }
+        ],
+        "intuition": "The Mouse's immediate characterization of his tale as 'long and a sad tale' and his sighing suggest a departure from the lighthearted, nonsensical events that have dominated the narrative thus far. This shift in tone might indicate a deeper, more melancholic aspect to the Wonderland experience, or perhaps a commentary on the nature of storytelling itself."
+    },
+    "95000": {
+        "items": [
+            {
+                "name": "tail",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.4,
+                "desc": "The hindmost part of an animal, especially when prolonged beyond the rest of the body, such as the tail of a mouse. In this context, it is part of a pun with 'tale'.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "long tail",
+                    "Mouse\u2019s tail"
+                ],
+                "context_snippet": "It is a long tail, certainly,\u201d said Alice, looking down with wonder at the Mouse\u2019s tail"
+            },
+            {
+                "name": "tail",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.4,
+                "desc": "The hindmost part of an animal, especially when prolonged beyond the rest of the body, such as the tail of a mouse. In this context, it is part of a pun with 'tale'.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "long tail",
+                    "Mouse\u2019s tail"
+                ],
+                "context_snippet": "It is a long tail, certainly,\u201d said Alice, looking down with wonder at the Mouse\u2019s tail"
+            },
+            {
+                "name": "wonder",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.6,
+                "desc": "A feeling of surprise mingled with admiration, caused by something beautiful, unexpected, unfamiliar, or inexplicable. It denotes a sense of awe or astonishment.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "with wonder"
+                ],
+                "context_snippet": "Alice, looking down with wonder at the Mouse\u2019s tail"
+            },
+            {
+                "name": "puzzling about",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.7,
+                "desc": "To think hard or be confused about something; to try to understand or solve a problem or mystery. In this case, Alice is trying to understand why the Mouse calls its 'tail' (which she interprets as 'tale') sad.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "kept on puzzling about it"
+                ],
+                "context_snippet": "And she kept on puzzling about it while the Mouse was speaking"
+            },
+            {
+                "name": "tale",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.4,
+                "desc": "A narrative or story, especially one that is imaginative or fictitious. In this context, it forms a pun with 'tail', as Alice misinterprets the Mouse's 'tail' (appendage) as a 'tale' (story).",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "the tale"
+                ],
+                "context_snippet": "her idea of the tale was something like this"
+            }
+        ],
+        "intuition": "The immediate misinterpretation of the Mouse's words by Alice highlights a fundamental disconnect in communication within this world. Alice's literal-mindedness, contrasted with the Mouse's intended meaning, suggests that language itself operates differently here, often leading to absurd misunderstandings rather than clear communication. This sets the stage for the narrative that follows, which will likely play on such linguistic ambiguities."
+    },
+    "96000": {
+        "items": [
+            {
+                "name": "go to law",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.7,
+                "desc": "To initiate legal proceedings against someone; to engage in a lawsuit. Rooted in the literal act of seeking justice through the legal system.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "go to law"
+                ],
+                "context_snippet": "\u2018Let us both go to law: I will prosecute"
+            },
+            {
+                "name": "prosecute",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.6,
+                "desc": "To institute legal proceedings against (a person or organization) for a crime or offence. From Latin 'prosequi' meaning 'pursue, follow up'.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "prosecute"
+                ],
+                "context_snippet": "go to law: I will prosecute you.\u2014Come, I\u2019ll"
+            },
+            {
+                "name": "take no denial",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.7,
+                "desc": "To refuse to accept a refusal; to insist strongly on one's demand or proposal. A common idiomatic expression indicating determination.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "take no denial"
+                ],
+                "context_snippet": "you.\u2014Come, I\u2019ll take no denial; We must have"
+            },
+            {
+                "name": "trial",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.5,
+                "desc": "A formal examination of evidence by a judge, and typically before a jury, in order to decide guilt in a case of criminal or civil proceedings. From Anglo-Norman French 'trial', from 'trier' 'to try'.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "trial",
+                    "trial"
+                ],
+                "context_snippet": "must have a trial: For really this morning"
+            },
+            {
+                "name": "cur",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.6,
+                "desc": "A dog of mixed breed; a mongrel. Often used contemptuously to refer to a worthless or ill-bred dog, or by extension, a contemptible person. From Old Norse 'kurra' 'to grumble'.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "cur"
+                ],
+                "context_snippet": "the mouse to the cur, \u2018Such a trial, dear"
+            },
+            {
+                "name": "wasting our breath",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.7,
+                "desc": "To speak or argue without achieving anything; to expend effort in talking to no avail. A common idiomatic expression.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "wasting our breath"
+                ],
+                "context_snippet": "or judge, would be wasting our breath.\u2019 \u2018I\u2019ll be"
+            },
+            {
+                "name": "cunning",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.5,
+                "desc": "Having or showing skill in achieving one's ends by deceit or evasion; artful, sly. From Old English 'cunnan' 'to know'.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "cunning"
+                ],
+                "context_snippet": "jury,\u2019 Said cunning old Fury: \u2018I\u2019ll try"
+            },
+            {
+                "name": "cause",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.7,
+                "desc": "A lawsuit; a case for judicial decision. In legal contexts, it refers to the matter brought before a court for determination. From Latin 'causa' 'reason, motive, lawsuit'.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "cause"
+                ],
+                "context_snippet": "try the whole cause, and condemn you to"
+            },
+            {
+                "name": "condemn",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.6,
+                "desc": "To sentence (someone) to a particular punishment, especially death. From Latin 'condemnare' 'to doom, to sentence'.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "condemn"
+                ],
+                "context_snippet": "whole cause, and condemn you to death.\u2019\u201d"
+            }
+        ],
+        "intuition": "The Mouse's poem introduces a stark example of arbitrary power and justice, where a single entity, Fury, assumes all roles of legal process to condemn another. This presents a world where logic and fairness, as Alice might understand them, are entirely absent, setting a tone for the narrative to follow."
+    },
+    "97000": {
+        "items": [
+            {
+                "name": "thinking of",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.6,
+                "desc": "An idiom meaning 'what is occupying your thoughts' or 'what are you contemplating'. It inquires about the subject of one's mental focus.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "thinking of"
+                ],
+                "context_snippet": "\u201cWhat are you thinking of?\u201d"
+            }
+        ],
+        "intuition": "The Mouse's abrupt interruption and severe tone highlight the ongoing clash between Alice's internal, often distracted, perspective and the expectations of the creatures she encounters. It raises the question of whether Alice's inattention is a deliberate act of disrespect or simply a consequence of her overwhelmed state."
+    },
+    "98000": {
+        "items": [
+            {
+                "name": "beg your pardon",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.6,
+                "desc": "A polite phrase used to apologize or to ask someone to repeat what they have said because one did not hear or understand it properly. In this context, it is used as an apology.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "I beg your pardon"
+                ],
+                "context_snippet": "\u201cI beg your pardon,\u201d said Alice very humbly"
+            },
+            {
+                "name": "humbly",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.5,
+                "desc": "In a modest, respectful, or submissive manner; without pride or arrogance. It describes Alice's deferential tone.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "humbly"
+                ],
+                "context_snippet": "said Alice very humbly: \u201cyou had got"
+            }
+        ],
+        "intuition": "Alice's humble apology and attempt to recall the story's last point highlight her persistent effort to conform to expected social behaviors, even when faced with the Mouse's disproportionate anger. This suggests a deep-seated need for order and politeness in her character."
+    },
+    "99000": {
+        "items": [
+            {
+                "name": "cried",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.4,
+                "desc": "To utter a loud sound or exclamation; to exclaim. In this context, it means to shout or speak loudly and emphatically, not necessarily to weep.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "cried"
+                ],
+                "context_snippet": "\u201cI had not!\u201d cried the Mouse, sharply"
+            }
+        ],
+        "intuition": "The Mouse's sudden, sharp anger reveals a deeper vulnerability or pride in his storytelling, suggesting that his narrative is not merely a distraction but holds personal significance for him. This emotional response contrasts with the earlier, more detached historical recitation."
+    },
+    "100000": {
+        "items": [
+            {
+                "name": "make herself useful",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.6,
+                "desc": "To perform actions that are helpful or of service to others. In 1865, this phrase was commonly used to describe someone actively contributing or assisting.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "make herself useful"
+                ],
+                "context_snippet": "always ready to make herself useful, and looking anxiously"
+            }
+        ],
+        "intuition": "Alice's continued literal interpretation of idiomatic expressions (first 'tale'/'tail', now 'knot' for a complicated story) reveals a fundamental disconnect between her understanding of language and the way it is used by the creatures of Wonderland. Does this reflect a childlike innocence, or a stubborn adherence to her own reality?"
+    },
+    "101000": {
+        "items": [
+            {
+                "name": "nothing of the sort",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.7,
+                "desc": "An emphatic refusal or denial, meaning 'absolutely not' or 'by no means'. It indicates a strong disagreement with a suggestion or statement.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "nothing of the sort"
+                ],
+                "context_snippet": "I shall do nothing of the sort,\u201d said the Mouse"
+            }
+        ],
+        "intuition": "The Mouse's reaction highlights a fundamental communication breakdown. Alice's literal-mindedness, intended as helpfulness, is consistently perceived as an insult by the Mouse, who is sensitive about his narrative and dignity. This suggests a recurring pattern of misinterpretation driving conflict."
+    },
+    "102000": {
+        "items": [
+            {
+                "name": "poor",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.5,
+                "desc": "In this context, 'poor' is an adjective meaning unfortunate, pitiable, or deserving of sympathy, rather than lacking wealth. This usage was common in 1865 and remains standard.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "poor Alice"
+                ],
+                "context_snippet": "pleaded poor Alice. \u201cBut you\u2019re"
+            }
+        ],
+        "intuition": "Alice's immediate reaction to the Mouse's departure is a plea for understanding, quickly followed by a justification of her own actions by attributing fault to the Mouse's 'easily offended' nature. This reveals a consistent pattern in Alice's character: a desire to maintain social harmony combined with a tendency to rationalize her own behavior when confronted with the consequences of her misunderstandings."
+    },
+    "103000": {
+        "items": [],
+        "intuition": "The Mouse's growl is a non-verbal communication. What does this non-verbal communication signify in the context of his previous actions and Alice's attempts to engage him? How does this refusal to speak further impact the group dynamic and Alice's understanding of the situation?"
+    },
+    "104000": {
+        "items": [
+            {
+                "name": "joined in chorus",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.7,
+                "desc": "To speak or say something simultaneously with other people, often in agreement or as a collective utterance. In 1865, this phrase was commonly understood to mean speaking in unison, much like a choir.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "joined in chorus"
+                ],
+                "context_snippet": "and the others all joined in chorus, \u201cYes, please do!\u201d"
+            },
+            {
+                "name": "shook its head",
+                "column": "idiom",
+                "type": "Universal",
+                "depth": 0.6,
+                "desc": "A common non-verbal gesture indicating negation, refusal, or disagreement, performed by moving the head from side to side. This meaning has been consistent across centuries.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "shook its head"
+                ],
+                "context_snippet": "but the Mouse only shook its head impatiently, and walked"
+            }
+        ],
+        "intuition": "The Mouse's consistent and escalating refusal to engage, despite collective pleas, underscores a fundamental communication barrier and the creature's unwavering commitment to its offended state. This highlights the futility of Alice's attempts to reason or cajole when faced with such an absolute emotional reaction."
+    },
+    "105000": {
+        "items": [
+            {
+                "name": "What a pity",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.7,
+                "desc": "An expression of regret or sorrow for something unfortunate or disappointing.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "What a pity"
+                ],
+                "context_snippet": "\u201cWhat a pity it wouldn\u2019t stay!\u201d sighed the Lory"
+            },
+            {
+                "name": "quite",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.6,
+                "desc": "Completely; entirely; absolutely.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "quite"
+                ],
+                "context_snippet": "as soon as it was quite out of sight"
+            },
+            {
+                "name": "took the opportunity",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.7,
+                "desc": "To seize a chance or favorable moment to do something.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "took the opportunity"
+                ],
+                "context_snippet": "an old Crab took the opportunity of saying"
+            },
+            {
+                "name": "lose your temper",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.8,
+                "desc": "To become angry or irritable; to lose self-control.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "lose your temper"
+                ],
+                "context_snippet": "never to lose your temper!\u201d"
+            },
+            {
+                "name": "Hold your tongue",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.8,
+                "desc": "An imperative command to stop talking or to be silent.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "Hold your tongue"
+                ],
+                "context_snippet": "\u201cHold your tongue, Ma!\u201d said the young Crab"
+            },
+            {
+                "name": "Ma",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.5,
+                "desc": "An informal, affectionate, or familiar term for 'mother'.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "Ma"
+                ],
+                "context_snippet": "\u201cHold your tongue, Ma!\u201d said the young Crab"
+            },
+            {
+                "name": "snappishly",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.7,
+                "desc": "In a sharp, irritable, or abrupt manner, often implying a quick, impatient retort.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "snappishly"
+                ],
+                "context_snippet": "the young Crab, a little snappishly."
+            },
+            {
+                "name": "try the patience of an oyster",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.9,
+                "desc": "To severely test or exhaust someone's patience, implying that even a creature known for its placid and uncomplaining nature would be provoked.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "try the patience of an oyster"
+                ],
+                "context_snippet": "enough to try the patience of an oyster!\u201d"
+            }
+        ],
+        "intuition": "The immediate aftermath of the Mouse's departure reveals the diverse and often self-serving reactions of the other creatures. Does the old Crab genuinely care about the Mouse's temper, or is she merely using the situation as a convenient teaching moment for her daughter? How does the young Crab's bluntness reflect the general lack of social graces or patience among these Wonderland inhabitants?"
+    },
+    "106000": {
+        "items": [
+            {
+                "name": "addressing nobody in particular",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.7,
+                "desc": "To speak aloud without directing one's words to any specific person present or implied, often as a form of thinking aloud or expressing a general sentiment.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "addressing nobody in particular"
+                ],
+                "context_snippet": "said Alice aloud, addressing nobody in particular. \u201cShe\u2019d soon"
+            },
+            {
+                "name": "fetch",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.6,
+                "desc": "To go for and bring back; to retrieve. In the context of animals, it often refers to a dog retrieving an object.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "fetch it back"
+                ],
+                "context_snippet": "She\u2019d soon fetch it back!\u201d"
+            }
+        ],
+        "intuition": "Alice's immediate reaction to the Mouse's departure is to wish for her cat, Dinah, to intervene. This reveals Alice's deep-seated reliance on the familiar and her inability to adapt to the unpredictable and often illogical social dynamics of Wonderland. It also subtly reintroduces the predator-prey dynamic, suggesting Alice's unconscious acceptance of a natural order that might be at odds with the current situation."
+    },
+    "107000": {
+        "items": [
+            {
+                "name": "venture",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.6,
+                "desc": "To dare or presume to do something, especially something that may be considered bold or risky. In 1865, its meaning was consistent with this usage.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "venture to ask"
+                ],
+                "context_snippet": "if I might venture to ask the question"
+            }
+        ],
+        "intuition": "The Lory's immediate question about Dinah highlights the group's attentiveness to Alice's exclamations, even those seemingly directed to herself. It also suggests a potential shift in the narrative's focus from the Mouse's story to Alice's personal world."
+    },
+    "108000": {
+        "items": [
+            {
+                "name": "capital one",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.7,
+                "desc": "In 19th-century English, 'capital' was often used informally to mean excellent, first-rate, or splendid. So, 'a capital one' refers to an excellent example of something, in this case, an excellent cat for catching mice.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "capital one"
+                ],
+                "context_snippet": "she\u2019s such a capital one for catching mice"
+            },
+            {
+                "name": "you can\u2019t think!",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.7,
+                "desc": "An emphatic expression used to convey that something is so remarkable or extreme that one cannot fully comprehend or imagine it. It means 'it's beyond your imagination' or 'you wouldn't believe it'.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "you can\u2019t think!"
+                ],
+                "context_snippet": "catching mice you can\u2019t think!"
+            },
+            {
+                "name": "as soon as look at it",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.8,
+                "desc": "An idiom meaning 'immediately' or 'without the slightest delay or hesitation'. It implies that the action (eating the bird) would happen instantly upon seeing it.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "as soon as look at it"
+                ],
+                "context_snippet": "eat a little bird as soon as look at it!\u201d"
+            }
+        ],
+        "intuition": "Alice's enthusiastic description of her cat's predatory nature, specifically its ability to catch mice and birds, to an audience that includes a mouse and a Lory (a type of bird), highlights a profound disconnect between Alice's familiar world and the sensitivities of her current companions. This raises questions about her awareness of her surroundings or her capacity for empathy in this new context."
+    },
+    "109000": {
+        "items": [
+            {
+                "name": "remarkable sensation",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.7,
+                "desc": "A strong and notable feeling or excitement caused by an event or statement. In 1865, 'sensation' often referred to a general excitement or stir among a group.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "remarkable sensation"
+                ],
+                "context_snippet": "This speech caused a remarkable sensation among the party."
+            },
+            {
+                "name": "night-air doesn\u2019t suit my throat",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.8,
+                "desc": "A polite, often slightly exaggerated, excuse for leaving or avoiding an activity, implying a delicate constitution or susceptibility to illness from cold or damp air. It was a common social convention to use such pretexts.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "the night-air doesn\u2019t suit my throat!"
+                ],
+                "context_snippet": "home; the night-air doesn\u2019t suit my throat!\u201d"
+            },
+            {
+                "name": "high time",
+                "column": "idiom",
+                "type": "Universal",
+                "depth": 0.6,
+                "desc": "A phrase indicating that something should have happened or been done already, and it is now past the appropriate moment.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "It\u2019s high time"
+                ],
+                "context_snippet": "my dears! It\u2019s high time you were all in bed!\u201d"
+            },
+            {
+                "name": "pretexts",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.7,
+                "desc": "Reasons given in justification of a course of action that are not the real reasons; an excuse.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "pretexts"
+                ],
+                "context_snippet": "On various pretexts they all moved off"
+            }
+        ],
+        "intuition": "The sudden and complete abandonment of Alice by the entire group of creatures highlights the profound disconnect between Alice's 'normal' world and the sensibilities of Wonderland. Her casual description of her pet's predatory nature, which would be unremarkable in her own world, is perceived as a direct threat by the very creatures she is addressing, leading to immediate and universal flight."
+    },
+    "110000": {
+        "items": [
+            {
+                "name": "melancholy",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.6,
+                "desc": "A feeling of pensive sadness, typically with no obvious cause; a gloomy state of mind, especially when habitual or prolonged.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "melancholy tone"
+                ],
+                "context_snippet": "herself in a melancholy tone."
+            },
+            {
+                "name": "down here",
+                "column": "idiom",
+                "type": "Contextual",
+                "depth": 0.7,
+                "desc": "In this specific context, 'down here' refers to the underground world or rabbit hole where Alice currently finds herself, contrasting with the 'up there' world she came from.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "down here"
+                ],
+                "context_snippet": "like her, down here, and I\u2019m"
+            },
+            {
+                "name": "low-spirited",
+                "column": "word",
+                "type": "Universal",
+                "depth": 0.6,
+                "desc": "Feeling sad, dejected, or depressed; lacking cheerfulness or enthusiasm.",
+                "temporal_drift": false,
+                "temporal_explanation": "",
+                "phrases": [
+                    "low-spirited"
+                ],
+                "context_snippet": "very lonely and low-spirited."
+            }
+        ],
+        "intuition": "The narrative highlights Alice's emotional vulnerability and her persistent, almost childlike, hope for resolution and companionship, even after repeated rejections and misunderstandings. Her attachment to Dinah underscores her longing for the familiar in an increasingly alien world."
+    },
+    "111000": {
+        "items": [],
+        "intuition": "[Structural Boundary]"
+    }
+};
+
+    const userdata = {
+        reflections: { "__aru__": [], "D9.P22": [], "D9.P23": [], "D9.P24": [], "D9.P25": [], "D9.P26": [], "D9.P27": [], "D9.P28": [] },
+        bookmarks: []
+    };
+
+    const contextData = {
+    "global": {
+        "paragraphs": [
+            "Alice, having grown and shrunk, found herself in a pool of tears with various creatures. After reaching the shore, the group, all wet and uncomfortable, sought a way to dry themselves. The Mouse's historical recitation failed. The Dodo proposed 'more energetic remedies', specifically a 'Caucus-race', explaining that the best way to understand it was to perform it. The Dodo then organized this race, marking a circular course, establishing that participants could start and stop at will, and declared it over after about half an hour, leaving everyone to wonder who had won. After a period of deliberation, the Dodo declared that everyone had won and all must have prizes, prompting a collective inquiry into who would provide these prizes. The Dodo then pointed to Alice, declaring her the winner, which caused the other participants to crowd around her, demanding prizes. In response to this demand, Alice, feeling despair, produced a box of comfits from her pocket, which she distributed as prizes, with exactly one for each participant."
+        ]
+    },
+    "local": {
+        "summary": "Alice's innocent remark about dogs sent the Mouse into a panic, though it soon returned, promising a tale once they reached dry land. After a chaotic swim to shore, the Dodo declared a peculiar race where everyone was a winner. Alice, ever resourceful, then distributed comfits as prizes to the bewildered assembly.",
+        "entities": [
+            {
+                "name": "Mouse",
+                "tag": "history",
+                "desc": "The Mouse is a creature encountered by Alice in the pool of tears, highly sensitive about cats and dogs due to a deep-seated family hatred. It took charge of the group of wet creatures, calling for order and promising to make them dry by reciting a historical account, which it refers to as 'the driest thing I know'. It previously paused its recitation to address a perceived interruption, resumed its account, and now, when questioned, replies with irritation, clarifying its meaning. It continues its historical account, ignoring a previous question, before directly addressing Alice."
+            },
+            {
+                "name": "Dinah",
+                "tag": "history",
+                "desc": "Dinah is Alice's cat, a domestic pet that Alice misses and expresses concern for during her fall. Alice views her as a 'dear quiet thing' who purrs, licks her paws, washes her face, and is good at catching mice."
+            },
+            {
+                "name": "Dodo",
+                "tag": "history",
+                "desc": "The Dodo, having reached the bank with Alice and other creatures, proposed a 'Caucus-race' to dry everyone. It then proceeded to organize and officiate this race, defining its unconventional rules and declaring its conclusion. After a period of deliberation, it declared that everyone had won and all must have prizes."
+            },
+            {
+                "name": "Alice",
+                "tag": "history",
+                "desc": "Alice, having experienced significant physical transformations and a bewildering journey through a pool of tears, has now joined a group of creatures on the bank. She participated in the Dodo's proposed 'Caucus-race' to get dry. She has now been designated the sole provider of prizes for the race."
+            },
+            {
+                "name": "Lory",
+                "tag": "history",
+                "desc": "The Lory is one of several creatures that found themselves in Alice's pool of tears and has now reached the bank with the others. It engages in a long argument with Alice, claiming superior knowledge due to its age, and becomes sulky when pressed to reveal its actual age. It consistently expresses discontent with the current circumstances and now quickly denies having interrupted the Mouse."
+            }
+        ]
+    }
+};
+
+    const navigation = {"previousAru": "", "nextAru": ""};
+
+    let currentAtu = null;
+    let currentAtuLineage = null;
+    let activeTab = 'reflection';
+    let currentView = 'reading'; 
+    let fadeBackTimer = null;
+    let hadReflectionText = false;
+    let expandedAtuGroups = new Set();
+    
+    // Context State Machine: 0 = None, 1 = Local, 2 = Global
+    let activeContextLevel = 0; 
+
+    // Touch physics state
+    let longPressTimer;
+    let pressStartX = 0;
+    let pressStartY = 0;
+    let touchStartTime = 0;
+    let isDragging = false;
+    let pullState = null;
+    let pullDistance = 0;
+    let wasAtTop = false;
+    let wasAtBottom = false;
+
+    let pinchStartDist = 0;
+    let pinchProcessed = false;
+    let isPinching = false;
+    let savedScrollY = 0;
+
+    const PULL_THRESHOLD = 80;
+    const SWIPE_THRESHOLD = 80;
+    const RUBBER_BAND_RESISTANCE = 0.4;
+    // #endregion
+
+    // #region Helpers
+    /*
+     * Determines the appropriate CSS class for depth mapping.
+     */
+    function depthClass(d) {
+        if (d >= 0.8) return 'd-lore';
+        if (d >= 0.5) return 'd-contextual';
+        return 'd-universal';
+    }
+
+    /*
+     * Escapes a string to be safely used within a regular expression.
+     */
+    function escapeRegex(s) { 
+        return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
+    }
+
+    /*
+     * Checks if the reading surface is scrolled near the absolute bottom.
+     */
+    function isNearBottom() {
+        return (window.innerHeight + window.scrollY) >= Math.max(document.body.scrollHeight, document.documentElement.scrollHeight) - 50;
+    }
+    // #endregion
+
+    // #region Initialization
+    /*
+     * Entry point to boot the application and setup event listeners.
+     */
+    function init() {
+        // wrapSentences(); Python Handled Validation.
+        buildProgressDots();
+        attachScrollListener();
+        attachReadingGestures();
+        populateInPageContext();
+        attachReflectionPageGestures();
+        
+        const sidecar = document.getElementById('sidecar-overlay');
+        let overlayStartY = 0;
+        sidecar.addEventListener('touchstart', (e) => overlayStartY = e.touches[0].clientY, {passive: true});
+        sidecar.addEventListener('touchmove', (e) => {
+            if (e.touches[0].clientY - overlayStartY > 80) closeSidecar();
+        }, {passive: true});
+    }
+
+    window.onload = init;
+    // #endregion
+
+    // #region DOM Preparation
+    /*
+     * Wraps all standard prose paragraphs into segmented sentence spans.
+     */
+    function wrapSentences() {
+        document.querySelectorAll('.atu').forEach(atu => {
+            if (atu.classList.contains('is-header') || atu.classList.contains('is-signature')) return;
+            const html = atu.innerHTML;
+            const sentences = html.match(/[^.!?]+[.!?"]+[\s]*/g) || [html];
+            atu.innerHTML = sentences.map(s => `<span class="sentence">${s}</span>`).join('');
+        });
+    }
+
+    /*
+     * Builds the visual progress dot elements dynamically.
+     */
+    function buildProgressDots() {
+        const bar = document.getElementById('progress-bar');
+        document.querySelectorAll('.atu').forEach(() => {
+            const d = document.createElement('div');
+            d.className = 'progress-dot';
+            bar.appendChild(d);
+        });
+        updateProgressDots();
+    }
+
+    let progressTimer;
+    /*
+     * Calculates which ATU is currently visible and highlights the corresponding dot.
+     */
+    function updateProgressDots() {
+        const dots = document.querySelectorAll('.progress-dot');
+        const atus = document.querySelectorAll('.atu');
+        const vh = window.innerHeight;
+        atus.forEach((atu, i) => {
+            const r = atu.getBoundingClientRect();
+            dots[i].classList.toggle('active', r.top < vh * 0.7 && r.bottom > vh * 0.2);
+        });
+    }
+
+    /*
+     * Attaches an optimized scroll listener to trigger progress dot visibility.
+     */
+    function attachScrollListener() {
+        window.addEventListener('scroll', () => {
+            if (currentView !== 'reading') return;
+            document.getElementById('progress-bar').classList.add('visible');
+            updateProgressDots();
+            clearTimeout(progressTimer);
+            progressTimer = setTimeout(() => document.getElementById('progress-bar').classList.remove('visible'), 1200);
+        }, { passive: true });
+    }
+
+    /*
+     * Seeds initial knowledge datasets into the hidden DOM context elements.
+     */
+    function populateInPageContext() {
+        document.getElementById('context-local-summary').textContent = contextData.local.summary;
+        const entityList = document.getElementById('context-local-entities');
+        contextData.local.entities.forEach(ent => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span class="entity-name">${ent.name}</span><span class="entity-tag ${ent.tag}">${ent.tag === 'history' ? 'History' : 'New'}</span><br>${ent.desc}`;
+            entityList.appendChild(li);
+        });
+
+        const globalDiv = document.getElementById('context-global-paragraphs');
+        contextData.global.paragraphs.forEach(p => {
+            const el = document.createElement('p');
+            el.className = 'context-prose';
+            el.textContent = p;
+            globalDiv.appendChild(el);
+        });
+    }
+    // #endregion
+
+    // #region Main Reading Gestures
+    /*
+     * Binds touch interactions for swipe, pull, and tap mechanics.
+     */
+    function attachReadingGestures() {
+        const surface = document.getElementById('reading-surface');
+        surface.addEventListener('touchstart', handleReadingTouchStart, { passive: false });
+        surface.addEventListener('touchmove', handleReadingTouchMove, { passive: false });
+        surface.addEventListener('touchend', handleReadingTouchEnd);
+        surface.addEventListener('touchcancel', resetGestureState);
+    }
+
+    /*
+     * Handles the start of a touch interaction on the reading surface.
+     * Steps:
+     * 1. Record X/Y origin and exact system timestamp.
+     * 2. Verify strict top-of-document constraint for pull logic.
+     * 3. Evaluate if target is a valid ATU to begin a 600ms long-press timer.
+     */
+    function handleReadingTouchStart(e) {
+        if (currentView !== 'reading') return;
+        isDragging = false;
+        pressStartX = e.touches[0].clientX;
+        pressStartY = e.touches[0].clientY;
+        touchStartTime = Date.now();
+        pullDistance = 0;
+        pullState = null;
+        
+        wasAtTop = window.scrollY <= 0;
+        wasAtBottom = isNearBottom();
+
+        if (e.touches.length > 1) {
+            isPinching = true;
+            clearTimeout(longPressTimer);
+            document.querySelectorAll('.atu.pressing').forEach(a => a.classList.remove('pressing'));
+        }
+
+        if (e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            pinchStartDist = Math.hypot(dx, dy);
+            pinchProcessed = false;
+            return;
+        }
+
+        const surface = document.getElementById('reading-surface');
+        surface.classList.remove('pulling');
+
+        const atu = e.target.closest('.atu');
+        if (atu && !atu.classList.contains('is-header') && !atu.classList.contains('is-signature')) {
+            currentAtu = atu;
+            currentAtuLineage = atu.getAttribute('data-opus-lineage');
+            const rect = atu.getBoundingClientRect();
+            atu.style.setProperty('--press-x', ((pressStartX - rect.left) / rect.width * 100) + '%');
+            atu.style.setProperty('--press-y', ((pressStartY - rect.top) / rect.height * 100) + '%');
+
+            longPressTimer = setTimeout(() => {
+                if (!isDragging && !pullState) {
+                    atu.classList.remove('pressing');
+                    openSidecar(atu);
+                }
+            }, 600);
+
+            setTimeout(() => { if (!isDragging && !pullState) atu.classList.add('pressing'); }, 100);
+        }
+    }
+
+    /*
+     * **COMPLEX FUNCTION**
+     * Handles touch movement on the reading surface, calculating rubber-band physics.
+     * Steps:
+     * 1. Calculate X/Y distance and cancel long-press if it's a drag.
+     * 2. If at strict top and context allows, calculate pull elasticity logic.
+     * 3. Apply raw CSS translateY to visually mimic document stretching.
+     * 4. Intercept the native scroll event using preventDefault().
+     * 5. Sync the UI pull indicators utilizing the scaled visual Y distance.
+     */
+    function handleReadingTouchMove(e) {
+        if (currentView !== 'reading') return;
+        const touch = e.touches[0];
+        const dy = touch.clientY - pressStartY;
+        const dx = touch.clientX - pressStartX;
+
+        if (e.touches.length === 2) {
+            if (e.cancelable) e.preventDefault();
+            const tdx = e.touches[0].clientX - e.touches[1].clientX;
+            const tdy = e.touches[0].clientY - e.touches[1].clientY;
+            const currentDist = Math.hypot(tdx, tdy);
+            const scale = currentDist / pinchStartDist;
+            
+            if (!pinchProcessed) {
+                if (scale < 0.7) { // Pinch Fingers Together (Zoom Out Spatial) -> Move 0 -> 1 -> 2
+                    pinchProcessed = true;
+                    if (activeContextLevel === 0) {
+                        savedScrollY = window.scrollY;
+                        document.getElementById('base-text-container').classList.add('hidden');
+                        document.getElementById('in-page-context-local').classList.remove('hidden');
+                        window.scrollTo(0, 0);
+                        activeContextLevel = 1;
+                    } else if (activeContextLevel === 1) {
+                        document.getElementById('in-page-context-local').classList.add('hidden');
+                        document.getElementById('in-page-context-global').classList.remove('hidden');
+                        window.scrollTo(0, 0);
+                        activeContextLevel = 2;
+                    }
+                } else if (scale > 1.4) { // Spread Fingers Apart (Zoom In Spatial) -> Move 2 -> 1 -> 0
+                    pinchProcessed = true;
+                    if (activeContextLevel === 2) {
+                        document.getElementById('in-page-context-global').classList.add('hidden');
+                        document.getElementById('in-page-context-local').classList.remove('hidden');
+                        window.scrollTo(0, 0);
+                        activeContextLevel = 1;
+                    } else if (activeContextLevel === 1) {
+                        document.getElementById('in-page-context-local').classList.add('hidden');
+                        document.getElementById('base-text-container').classList.remove('hidden');
+                        window.scrollTo(0, savedScrollY);
+                        activeContextLevel = 0;
+                    }
+                }
+            }
+            return;
+        }
+
+        if (Math.abs(dy) > 10 || Math.abs(dx) > 10) {
+            isDragging = true;
+            clearTimeout(longPressTimer);
+            document.querySelectorAll('.atu.pressing').forEach(a => a.classList.remove('pressing'));
+        }
+
+        const atTop = wasAtTop && window.scrollY <= 0;
+        const atBottom = wasAtBottom || isNearBottom();
+        const surface = document.getElementById('reading-surface');
+
+        // Bottom Pull (Reflection Page)
+        if (atBottom && dy < 0) {
+            if (e.cancelable) e.preventDefault(); 
+            pullState = 'bottom';
+            pullDistance = Math.abs(dy);
+            
+            const visualY = dy * RUBBER_BAND_RESISTANCE; 
+            surface.classList.add('pulling');
+            surface.style.transform = `translateY(${visualY}px)`; // Negative Y translates up
+
+            updatePullIndicator('pull-indicator-bottom', 'pull-bottom-text', pullDistance * RUBBER_BAND_RESISTANCE, 'Release to reflect', 'Pull to reflect');
+        }
+    }
+
+    /*
+     * **COMPLEX FUNCTION**
+     * Concludes the touch event on the reading surface and resolves gestures.
+     * Steps:
+     * 1. Clean up lingering visual states (timers, press classes).
+     * 2. Clear the rubber-band CSS transform to allow the native CSS transition snap-back.
+     * 3. Route gesture intent (Context injection, Navigation, Reflection page).
+     * 4. If duration was < 600ms and no drag/pull occurred, trigger sentence highlight toggle.
+     * 5. Reset all active gesture states tracking.
+     */
+    function handleReadingTouchEnd(e) {
+        if (currentView !== 'reading') return;
+        clearTimeout(longPressTimer);
+        document.querySelectorAll('.atu.pressing').forEach(a => a.classList.remove('pressing'));
+
+        const dx = e.changedTouches[0].clientX - pressStartX;
+        const dy = e.changedTouches[0].clientY - pressStartY;
+        const touchDuration = Date.now() - touchStartTime;
+
+        const surface = document.getElementById('reading-surface');
+        surface.classList.remove('pulling');
+        surface.style.transform = ''; // Initiates CSS transition snap-back
+
+        const visualBottomPull = pullState === 'bottom' ? pullDistance * RUBBER_BAND_RESISTANCE : 0;
+
+        // Resolve bottom pull
+        if (pullState === 'bottom' && visualBottomPull > PULL_THRESHOLD) {
+            openReflectionPage();
+        }
+        // Resolve horizontal swipe
+        else if (!isPinching && Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) * 1.5 && !pullState) {
+            if (dx < 0 && navigation.nextAru) {
+                window.location.href = navigation.nextAru;
+            } else if (dx > 0 && navigation.previousAru) {
+                window.location.href = navigation.previousAru;
+            }
+        }
+        // Short tap constraint check
+        else if (!isPinching && !isDragging && !pullState && touchDuration < 600) {
+            const sentence = e.target.closest('.sentence');
+            if (sentence) sentence.classList.toggle('highlighted');
+        }
+
+        if (e.touches.length === 0) {
+            isPinching = false;
+        }
+
+        hidePullIndicators();
+        resetGestureState();
+    }
+
+    /*
+     * Resets the structural data for gesture evaluation.
+     */
+    function resetGestureState() {
+        pullState = null; 
+        pullDistance = 0; 
+        wasAtTop = false; 
+        wasAtBottom = false;
+    }
+
+    /*
+     * Syncs a pull indicator element with current gesture physics.
+     */
+    function updatePullIndicator(elementId, textId, distance, readyText, pullText) {
+        const ind = document.getElementById(elementId);
+        ind.classList.add('visible');
+        ind.classList.toggle('ready', distance > PULL_THRESHOLD);
+        document.getElementById(textId).textContent = distance > PULL_THRESHOLD ? readyText : pullText;
+    }
+
+    /*
+     * Forces all pull indicators to a hidden state.
+     */
+    function hidePullIndicators() {
+        document.getElementById('pull-indicator-top').classList.remove('visible', 'ready');
+        document.getElementById('pull-indicator-bottom').classList.remove('visible', 'ready');
+    }
+    // #endregion
+
+    // #region Sidecar Management
+    /*
+     * Opens the sidecar UI and initiates the markup generation for terms.
+     */
+    function openSidecar(atu) {
+        currentAtu = atu;
+        currentAtuLineage = atu.getAttribute('data-opus-lineage');
+        const data = knowledgeDb[currentAtuLineage];
+
+        const html = buildSidecarSourceHtml(atu.textContent, data);
+        document.getElementById('sidecar-text').innerHTML = html;
+
+        switchTab('reflection');
+        renderReflections();
+        resetDefinition();
+        resetIntuition();
+
+        const overlay = document.getElementById('sidecar-overlay');
+        overlay.style.display = 'flex';
+        requestAnimationFrame(() => { overlay.classList.add('active'); });
+
+        const ta = document.getElementById('ref-textarea');
+        ta.value = '';
+        ta.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+        });
+    }
+
+    /*
+     * Computes the final HTML string containing interactive knowledge items.
+     */
+    function buildSidecarSourceHtml(rawText, data) {
+        let html = rawText;
+        if (!data || data.items.length === 0) return html;
+
+        const sorted = [...data.items].sort((a, b) =>
+            Math.max(...b.phrases.map(p => p.length)) - Math.max(...a.phrases.map(p => p.length))
+        );
+
+        const placeholders = [];
+        sorted.forEach((item, idx) => {
+            item.phrases.forEach(phrase => {
+                const regex = new RegExp(`\\b(${escapeRegex(phrase)})\\b`, 'gi');
+                html = html.replace(regex, match => {
+                    const ph = `__PH${placeholders.length}__`;
+                    const tc = item.column === 'entity' ? 't-entity' : item.column === 'word' ? 't-word' : 't-idiom';
+                    const dc = depthClass(item.depth);
+                    placeholders.push(`<span class="cw ${tc} ${dc}" data-idx="${idx}" onclick="onWordTap(this, ${idx})">${match}</span>`);
+                    return ph;
+                });
+            });
+        });
+
+        placeholders.forEach((r, i) => { 
+            html = html.replaceAll(`__PH${i}__`, r); 
+        });
+
+        return html;
+    }
+
+    /*
+     * Triggers sidecar tear down sequence.
+     */
+    function closeSidecar() {
+        clearFadeBack();
+        const overlay = document.getElementById('sidecar-overlay');
+        overlay.classList.remove('active');
+        setTimeout(() => { overlay.style.display = 'none'; }, 350);
+    }
+    // #endregion
+
+    // #region Tab Management
+    /*
+     * Orchestrates visual swapping between sidecar tool tabs.
+     */
+    function switchTab(tab) {
+        activeTab = tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `panel-${tab}`));
+
+        if (tab === 'intuition') generateIntuition();
+        clearFadeBack();
+    }
+
+    /*
+     * Handles tap interactions on knowledge terms within the sidecar.
+     */
+    function onWordTap(el, idx) {
+        if (!currentAtuLineage) return;
+        const data = knowledgeDb[currentAtuLineage];
+        if (!data) return;
+
+        const sorted = [...data.items].sort((a, b) =>
+            Math.max(...b.phrases.map(p => p.length)) - Math.max(...a.phrases.map(p => p.length))
+        );
+        const item = sorted[idx];
+        if (!item) return;
+
+        document.querySelectorAll('#sidecar-text .cw.selected').forEach(w => w.classList.remove('selected'));
+        el.classList.add('selected');
+
+        const refTextarea = document.getElementById('ref-textarea');
+        hadReflectionText = refTextarea && refTextarea.value.trim().length > 0;
+
+        const colorMap = {
+            entity: { bg: 'var(--blue-light)', color: 'var(--blue-deep)' },
+            word: { bg: 'var(--yellow-light)', color: 'var(--yellow-deep)' },
+            idiom: { bg: 'var(--green-light)', color: 'var(--green-deep)' }
+        };
+        const c = colorMap[item.column] || colorMap.word;
+
+        document.getElementById('def-content').innerHTML = `
+            <div class="def-content">
+                <div class="def-word">${item.name}</div>
+                <div class="def-type-badge" style="background:${c.bg}; color:${c.color}">${item.type} · ${item.column}</div>
+                <div class="def-meaning">${item.desc}</div>
+            </div>`;
+
+        switchTab('definition');
+        if (hadReflectionText) startFadeBack();
+    }
+
+    /*
+     * Initializes the UX timer routing users back to the reflection tab.
+     */
+    function startFadeBack() {
+        clearFadeBack();
+        document.getElementById('reflect-fade-ring').classList.add('pulsing');
+
+        const bar = document.getElementById('def-fade-bar');
+        bar.classList.remove('counting');
+        bar.offsetHeight; 
+        bar.classList.add('counting');
+
+        fadeBackTimer = setTimeout(() => {
+            clearFadeBack();
+            switchTab('reflection');
+            setTimeout(() => {
+                const ta = document.getElementById('ref-textarea');
+                if (ta) ta.focus();
+            }, 700);
+        }, 5000);
+
+        const panel = document.getElementById('panel-definition');
+        panel.addEventListener('pointerdown', killFadeBack, { once: true });
+    }
+
+    /*
+     * Kills the active fade-back timer manually via user interrupt.
+     */
+    function killFadeBack() {
+        clearFadeBack();
+    }
+
+    /*
+     * Resets structural attributes related to the fade-back mechanic.
+     */
+    function clearFadeBack() {
+        if (fadeBackTimer) { clearTimeout(fadeBackTimer); fadeBackTimer = null; }
+        document.getElementById('reflect-fade-ring').classList.remove('pulsing');
+        const bar = document.getElementById('def-fade-bar');
+        bar.classList.remove('counting');
+        const panel = document.getElementById('panel-definition');
+        panel.removeEventListener('pointerdown', killFadeBack);
+    }
+
+    /*
+     * Resets visual structure for the Definition panel empty state.
+     */
+    function resetDefinition() {
+        document.getElementById('def-content').innerHTML = '<div class="def-empty">Tap a highlighted word above to see its meaning</div>';
+        clearFadeBack();
+    }
+
+    /*
+     * Populates the Intuition tab utilizing predefined reading guides.
+     */
+    function generateIntuition() {
+        if (!currentAtuLineage) return;
+        const data = knowledgeDb[currentAtuLineage];
+        const container = document.getElementById('intuition-content');
+        
+        if (!data || !data.intuition) {
+            container.innerHTML = '<div class="intuition-placeholder">No reading guide available for this paragraph.</div>';
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="intuition-content">
+                <div class="intuition-label">Reading Guide</div>
+                <div class="intuition-text">${data.intuition}</div>
+            </div>`;
+    }
+
+    /*
+     * Resets visual structure for the Intuition panel empty state.
+     */
+    function resetIntuition() {
+        document.getElementById('intuition-content').innerHTML =
+            '<div class="intuition-placeholder">Tap to receive a reading guide for this paragraph</div>';
+    }
+    // #endregion
+
+    // #region Sidecar Reflections
+    /*
+     * Builds and appends existing notes into the sidecar reflection UI.
+     */
+    function renderReflections() {
+        const list = document.getElementById('ref-notes-list');
+        if (!list || !currentAtuLineage) return;
+
+        const notes = userdata.reflections[currentAtuLineage] || [];
+        list.innerHTML = '';
+        notes.forEach((note, i) => {
+            const div = document.createElement('div');
+            div.className = 'ref-note';
+            div.innerHTML = `
+                <span class="ref-note-text">\u201C${note}\u201D</span>
+                <div class="ref-note-actions">
+                    <span onclick="deleteReflection(${i})">\u00D7</span>
+                </div>`;
+            list.appendChild(div);
+        });
+    }
+
+    /*
+     * Appends a new sidecar reflection to the dataset and initiates a re-render.
+     */
+    function saveReflection() {
+        const ta = document.getElementById('ref-textarea');
+        if (!ta || !currentAtuLineage) return;
+        const val = ta.value.trim();
+        if (!val) return;
+
+        if (!userdata.reflections[currentAtuLineage]) userdata.reflections[currentAtuLineage] = [];
+        userdata.reflections[currentAtuLineage].push(val);
+
+        ta.value = '';
+        ta.style.height = 'auto';
+        renderReflections();
+    }
+
+    /*
+     * Removes an isolated sidecar reflection from the dataset based on index.
+     */
+    function deleteReflection(idx) {
+        if (!currentAtuLineage) return;
+        if (userdata.reflections[currentAtuLineage]) {
+            userdata.reflections[currentAtuLineage].splice(idx, 1);
+            renderReflections();
+        }
+    }
+    // #endregion
+
+    // #region Reflection Page Implementation
+    /*
+     * Transforms the master viewport into the reflection context page.
+     */
+    function openReflectionPage() {
+        currentView = 'reflection';
+        document.getElementById('reading-surface').classList.add('hidden');
+        document.getElementById('progress-bar').classList.remove('visible');
+        document.getElementById('reflection-page').classList.remove('hidden');
+        populateReflectionPage();
+    }
+
+    /*
+     * Reverts master viewport back to the core reading experience.
+     */
+    function closeReflectionPage() {
+        currentView = 'reading';
+        document.getElementById('reflection-page').classList.add('hidden');
+        document.getElementById('reading-surface').classList.remove('hidden');
+    }
+
+    /*
+     * Central execution pipeline to build the reflection page structure.
+     */
+    function populateReflectionPage() {
+        renderAruReflections();
+        renderAtuReflections();
+    }
+
+    /*
+     * Builds and inserts global (ARU-level) reflections into DOM view.
+     */
+    function renderAruReflections() {
+        const aruSection = document.getElementById('rp-aru-section');
+        aruSection.innerHTML = '';
+        const aruNotes = userdata.reflections['__aru__'] || [];
+        aruNotes.forEach((note, i) => {
+            const card = document.createElement('div');
+            card.className = 'rp-aru-card';
+            card.innerHTML = `
+                <div class="rp-aru-card-label">Session Reflection</div>
+                <div class="rp-aru-card-note" id="rp-aru-note-${i}">${note}</div>
+                <div class="rp-aru-card-actions" id="rp-aru-actions-${i}">
+                    <span onclick="editAruNote(${i})">Edit</span>
+                    <span onclick="deleteAruNote(${i})">Delete</span>
+                </div>`;
+            aruSection.appendChild(card);
+        });
+    }
+
+    /*
+     * Scrapes reading layout and builds nested (ATU-level) reflections.
+     */
+    function renderAtuReflections() {
+        const atuSection = document.getElementById('rp-atu-section');
+        atuSection.innerHTML = '';
+        const atus = document.querySelectorAll('.atu');
+        let hasAtuNotes = false;
+
+        atus.forEach(atu => {
+            if (atu.classList.contains('is-header') || atu.classList.contains('is-signature')) return;
+            const lineage = atu.getAttribute('data-opus-lineage');
+            const notes = userdata.reflections[lineage];
+            if (!notes || !notes.length) return;
+
+            hasAtuNotes = true;
+            const firstSentence = (atu.textContent.match(/[^.!?]+[.!?"]+/) || [atu.textContent.substring(0, 80)])[0].trim();
+
+            const group = document.createElement('div');
+            group.className = 'rp-atu-group';
+            group.setAttribute('data-lineage', lineage);
+            
+            if (expandedAtuGroups.has(lineage)) group.classList.add('expanded');
+
+            let notesHtml = '';
+            notes.forEach((note, i) => {
+                notesHtml += `<div class="rp-atu-note" id="rp-atu-note-${lineage}-${i}">
+                    <span class="rp-atu-note-text">\u201C${note}\u201D</span>
+                    <div class="rp-atu-note-actions">
+                        <span onclick="editAtuNote('${lineage}', ${i}); event.stopPropagation();">Edit</span>
+                        <span onclick="deleteAtuNote('${lineage}', ${i}); event.stopPropagation();">Del</span>
+                    </div></div>`;
+            });
+
+            group.innerHTML = `
+                <div class="rp-atu-header" onclick="toggleAtuGroup(this.parentElement)">
+                    <span class="rp-atu-snippet">${firstSentence}</span>
+                    <span class="rp-atu-count">${notes.length}</span>
+                    <span class="rp-atu-chevron">\u203A</span>
+                </div>
+                <div class="rp-atu-body">
+                    <div class="rp-atu-full-text">${atu.textContent}</div>
+                    ${notesHtml}
+                </div>`;
+            atuSection.appendChild(group);
+        });
+
+        if (!hasAtuNotes) atuSection.innerHTML = '<div class="rp-empty">No paragraph reflections yet\u2026</div>';
+    }
+
+    /*
+     * Expands an ATU group and archives state to prevent collapse on re-render.
+     */
+    function toggleAtuGroup(group) {
+        group.classList.toggle('expanded');
+        const lineage = group.getAttribute('data-lineage');
+        if (group.classList.contains('expanded')) {
+            expandedAtuGroups.add(lineage);
+        } else {
+            expandedAtuGroups.delete(lineage);
+        }
+    }
+
+    /*
+     * Pushes new top-level ARU reflection string into data stack.
+     */
+    function saveAruReflection() {
+        const ta = document.getElementById('rp-aru-textarea');
+        const val = ta.value.trim();
+        if (!val) return;
+        userdata.reflections['__aru__'].push(val);
+        ta.value = '';
+        populateReflectionPage();
+    }
+
+    /*
+     * Triggers inline edit mode for an ARU reflection.
+     */
+    function editAruNote(idx) {
+        const noteEl = document.getElementById(`rp-aru-note-${idx}`);
+        const actionsEl = document.getElementById(`rp-aru-actions-${idx}`);
+        if (!noteEl) return;
+        const currentText = userdata.reflections['__aru__'][idx];
+        noteEl.innerHTML = `<div class="rp-edit-row">
+            <textarea class="ref-textarea" id="rp-aru-edit-ta-${idx}" rows="1">${currentText}</textarea>
+            <button class="ref-save-btn" onclick="saveAruEdit(${idx})">Save</button>
+        </div>`;
+        actionsEl.style.display = 'none';
+        document.getElementById(`rp-aru-edit-ta-${idx}`).focus();
+    }
+
+    /*
+     * Saves changes to an ARU reflection or deletes if emptied.
+     */
+    function saveAruEdit(idx) {
+        const ta = document.getElementById(`rp-aru-edit-ta-${idx}`);
+        const val = ta.value.trim();
+        if (!val) {
+            userdata.reflections['__aru__'].splice(idx, 1);
+        } else {
+            userdata.reflections['__aru__'][idx] = val;
+        }
+        populateReflectionPage();
+    }
+
+    /*
+     * Removes ARU reflection node logically and visually.
+     */
+    function deleteAruNote(idx) {
+        userdata.reflections['__aru__'].splice(idx, 1);
+        populateReflectionPage();
+    }
+
+    /*
+     * Triggers inline edit mode for an ATU reflection.
+     */
+    function editAtuNote(lineage, idx) {
+        const noteEl = document.getElementById(`rp-atu-note-${lineage}-${idx}`);
+        if (!noteEl) return;
+        const currentText = userdata.reflections[lineage][idx];
+        noteEl.innerHTML = `<div class="rp-edit-row">
+            <textarea class="ref-textarea" id="rp-atu-edit-ta-${lineage}-${idx}" rows="1">${currentText}</textarea>
+            <button class="ref-save-btn" onclick="saveAtuEdit('${lineage}', ${idx})">Save</button>
+        </div>`;
+        document.getElementById(`rp-atu-edit-ta-${lineage}-${idx}`).focus();
+    }
+
+    /*
+     * Saves changes to an ATU reflection or deletes if emptied.
+     */
+    function saveAtuEdit(lineage, idx) {
+        const ta = document.getElementById(`rp-atu-edit-ta-${lineage}-${idx}`);
+        const val = ta.value.trim();
+        if (!val) {
+            userdata.reflections[lineage].splice(idx, 1);
+        } else {
+            userdata.reflections[lineage][idx] = val;
+        }
+        populateReflectionPage();
+    }
+
+    /*
+     * Removes ATU reflection node logically and visually.
+     */
+    function deleteAtuNote(lineage, idx) {
+        userdata.reflections[lineage].splice(idx, 1);
+        populateReflectionPage();
+    }
+
+    /*
+     * Connects touch gestures applied explicitly while in the Reflection Page.
+     */
+    function attachReflectionPageGestures() {
+        const page = document.getElementById('reflection-page');
+        let startY = 0;
+        let pulling = false;
+        let pullDir = null;
+        let dist = 0;
+
+        page.addEventListener('touchstart', e => {
+            if (currentView !== 'reflection') return;
+            startY = e.touches[0].clientY;
+            pulling = false;
+            pullDir = null;
+            dist = 0;
+        }, { passive: true });
+
+        page.addEventListener('touchmove', e => {
+            if (currentView !== 'reflection') return;
+            const dy = e.touches[0].clientY - startY;
+            if (Math.abs(dy) > 15) pulling = true;
+
+            if (page.scrollTop < 5 && dy > 20) {
+                if (e.cancelable) e.preventDefault();
+                pullDir = 'top';
+                dist = dy;
+                updatePullIndicator('pull-indicator-top', 'pull-top-text', dy, 'Release to return', 'Pull to return');
+            } else if (isReflectionNearBottom() && dy < -20) {
+                if (e.cancelable) e.preventDefault();
+                pullDir = 'bottom';
+                dist = Math.abs(dy);
+                updatePullIndicator('pull-indicator-bottom', 'pull-bottom-text', dist, 'Release for next ARU', 'Pull for next ARU');
+            }
+        }, { passive: false });
+
+        page.addEventListener('touchend', () => {
+            if (pullDir === 'top' && dist > PULL_THRESHOLD) {
+                closeReflectionPage();
+            } else if (pullDir === 'bottom' && dist > PULL_THRESHOLD && navigation.nextAru) {
+                window.location.href = navigation.nextAru;
+            }
+            hidePullIndicators();
+            pulling = false; pullDir = null; dist = 0;
+        });
+    }
+    // #endregion
+</script>
+</body>
+</html>
