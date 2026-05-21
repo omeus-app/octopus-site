@@ -5,9 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>octopus — Wander. Lose track of time.</title>
-    <meta name="description" content="octopus is a reading engine that strengthens your comprehension. No shortcuts. No summaries. Just you and the book. Launching July 2026.">
+    <meta name="description"
+        content="octopus is a reading engine that strengthens your comprehension. No shortcuts. No summaries. Just you and the book. Launching July 2026.">
     <meta property="og:title" content="octopus — Wander. Lose track of time.">
-    <meta property="og:description" content="We are building a gym for your mind, not a library. octopus strengthens your comprehension until you can tackle the densest texts independently.">
+    <meta property="og:description"
+        content="We are building a gym for your mind, not a library. octopus strengthens your comprehension until you can tackle the densest texts independently.">
     <meta property="og:image" content="og-image.png">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://octopus.you">
@@ -16,7 +18,9 @@
     <meta name="twitter:description" content="A reading engine against cognitive decline. Launching July 2026.">
     <meta name="twitter:image" content="og-image.png">
     <link rel="icon" type="image/png" href="logo.png">
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 
@@ -40,7 +44,10 @@
         </div>
         <div class="scroll-indicator" id="scroll-indicator">
             <span>The story</span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
         </div>
     </section>
 
@@ -55,7 +62,7 @@
                 <h2 class="pitch-heading">The Buffet Problem</h2>
                 <p class="pitch-text">
                     We are living in an era of <strong>intellectual diabetes</strong>.
-                    We consume fragments, bullet points, and AI summaries that make us 
+                    We consume fragments, bullet points, and AI summaries that make us
                     <em>feel smart</em> while our comprehension engine atrophies.
                 </p>
             </div>
@@ -69,7 +76,7 @@
                     There is no other way.
                 </p>
                 <p class="pitch-text pitch-text-secondary">
-                    octopus is designed for the walk. We make that walk as engaging 
+                    octopus is designed for the walk. We make that walk as engaging
                     and immersive as possible — but we refuse to take the walk for you.
                 </p>
             </div>
@@ -78,16 +85,17 @@
                 <div class="pitch-accent-line"></div>
                 <h2 class="pitch-heading">The Cheapest Gym Membership</h2>
                 <p class="pitch-text">
-                    We are building the cheapest gym membership for the most sophisticated 
-                    muscle in the body. And unlike every other gym, our goal isn't to keep 
-                    you coming back — it's to <strong>make you strong enough to walk away</strong>.
+                    We are building the cheapest gym membership for the most sophisticated
+                    muscle in the body. And unlike every other gym, our goal isn't to keep
+                    you coming back. It's to <strong>make you strong enough to walk away</strong>.
                 </p>
             </div>
 
         </div>
 
         <div class="pitch-cta-row">
-            <a href="https://omeus.substack.com/about" target="_blank" rel="noopener" class="pitch-link" id="link-manifesto">
+            <a href="https://omeus.substack.com/about" target="_blank" rel="noopener" class="pitch-link"
+                id="link-manifesto">
                 Read the full manifesto →
             </a>
         </div>
@@ -104,8 +112,8 @@
             </div>
             <h2 class="demo-heading">Experience it yourself</h2>
             <p class="demo-description">
-                Read a chapter of <em>Alice's Adventures in Wonderland</em> through the 
-                octopus reading engine. Tap sentences. Discover meanings. Reflect. 
+                Read a chapter of <em>Alice's Adventures in Wonderland</em> through the
+                octopus reading engine. Tap sentences. Discover meanings. Reflect.
                 Feel what reading <em>should</em> feel like.
             </p>
             <a href="demo.html" class="btn btn-primary btn-large" id="cta-demo-main">
@@ -125,16 +133,13 @@
                 Follow the journey. Get early access when we launch.
             </p>
             <div class="subscribe-embed" id="subscribe-embed">
-                <iframe src="https://omeus.substack.com/embed" 
-                        width="100%" 
-                        height="150" 
-                        style="border:none; background:transparent;" 
-                        frameborder="0" 
-                        scrolling="no"
-                        title="Subscribe to octopus on Substack">
+                <iframe src="https://omeus.substack.com/embed" width="100%" height="150"
+                    style="border:none; background:transparent;" frameborder="0" scrolling="no"
+                    title="Subscribe to octopus on Substack">
                 </iframe>
             </div>
-            <a href="https://omeus.substack.com/" target="_blank" rel="noopener" class="subscribe-blog-link" id="link-blog">
+            <a href="https://omeus.substack.com/" target="_blank" rel="noopener" class="subscribe-blog-link"
+                id="link-blog">
                 Read the blog on Substack →
             </a>
         </div>
@@ -161,87 +166,87 @@
          SCRIPTS
          ═══════════════════════════════════════ -->
     <script>
-    (function() {
-        'use strict';
+        (function () {
+            'use strict';
 
-        // ─── Fade-in on load ───
-        function revealHero() {
-            const elements = [
-                { el: document.getElementById('logo-container'), delay: 0 },
-                { el: document.getElementById('hero-title'), delay: 400 },
-                { el: document.getElementById('hero-tagline'), delay: 800 },
-                { el: document.getElementById('scroll-indicator'), delay: 1400 }
-            ];
+            // ─── Fade-in on load ───
+            function revealHero() {
+                const elements = [
+                    { el: document.getElementById('logo-container'), delay: 0 },
+                    { el: document.getElementById('hero-title'), delay: 400 },
+                    { el: document.getElementById('hero-tagline'), delay: 800 },
+                    { el: document.getElementById('scroll-indicator'), delay: 1400 }
+                ];
 
-            elements.forEach(({ el, delay }) => {
-                if (!el) return;
-                setTimeout(() => {
-                    el.style.opacity = '1';
-                    el.style.transform = 'translateY(0)';
-                }, delay);
-            });
-        }
-
-        // ─── Scroll-triggered reveals ───
-        function initScrollReveals() {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('revealed');
-                        observer.unobserve(entry.target);
-                    }
+                elements.forEach(({ el, delay }) => {
+                    if (!el) return;
+                    setTimeout(() => {
+                        el.style.opacity = '1';
+                        el.style.transform = 'translateY(0)';
+                    }, delay);
                 });
-            }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
+            }
 
-            document.querySelectorAll('.pitch-block, .demo-teaser-container, .subscribe-container').forEach(el => {
-                observer.observe(el);
+            // ─── Scroll-triggered reveals ───
+            function initScrollReveals() {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('revealed');
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
+
+                document.querySelectorAll('.pitch-block, .demo-teaser-container, .subscribe-container').forEach(el => {
+                    observer.observe(el);
+                });
+            }
+
+            // ─── Scroll indicator fade ───
+            function initScrollIndicator() {
+                const indicator = document.getElementById('scroll-indicator');
+                if (!indicator) return;
+
+                let ticking = false;
+                window.addEventListener('scroll', () => {
+                    if (!ticking) {
+                        requestAnimationFrame(() => {
+                            const scrollY = window.scrollY;
+                            indicator.style.opacity = Math.max(0, 1 - scrollY / 200);
+                            ticking = false;
+                        });
+                        ticking = true;
+                    }
+                }, { passive: true });
+            }
+
+            // ─── Parallax on hero glow ───
+            function initParallax() {
+                const glow = document.querySelector('.hero-glow');
+                if (!glow) return;
+
+                let ticking = false;
+                window.addEventListener('scroll', () => {
+                    if (!ticking) {
+                        requestAnimationFrame(() => {
+                            const scrollY = window.scrollY;
+                            glow.style.transform = `translateY(${scrollY * 0.3}px)`;
+                            ticking = false;
+                        });
+                        ticking = true;
+                    }
+                }, { passive: true });
+            }
+
+            // ─── Init ───
+            window.addEventListener('DOMContentLoaded', () => {
+                revealHero();
+                initScrollReveals();
+                initScrollIndicator();
+                initParallax();
             });
-        }
-
-        // ─── Scroll indicator fade ───
-        function initScrollIndicator() {
-            const indicator = document.getElementById('scroll-indicator');
-            if (!indicator) return;
-
-            let ticking = false;
-            window.addEventListener('scroll', () => {
-                if (!ticking) {
-                    requestAnimationFrame(() => {
-                        const scrollY = window.scrollY;
-                        indicator.style.opacity = Math.max(0, 1 - scrollY / 200);
-                        ticking = false;
-                    });
-                    ticking = true;
-                }
-            }, { passive: true });
-        }
-
-        // ─── Parallax on hero glow ───
-        function initParallax() {
-            const glow = document.querySelector('.hero-glow');
-            if (!glow) return;
-
-            let ticking = false;
-            window.addEventListener('scroll', () => {
-                if (!ticking) {
-                    requestAnimationFrame(() => {
-                        const scrollY = window.scrollY;
-                        glow.style.transform = `translateY(${scrollY * 0.3}px)`;
-                        ticking = false;
-                    });
-                    ticking = true;
-                }
-            }, { passive: true });
-        }
-
-        // ─── Init ───
-        window.addEventListener('DOMContentLoaded', () => {
-            revealHero();
-            initScrollReveals();
-            initScrollIndicator();
-            initParallax();
-        });
-    })();
+        })();
     </script>
 </body>
 
