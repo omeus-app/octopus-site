@@ -33,8 +33,21 @@
         html, body { 
             height: 100%; 
             background: var(--bg); 
+            background-image: radial-gradient(circle at 50% 0%, #FFFFFF 0%, var(--bg) 80%);
             overflow: hidden;
             -webkit-font-smoothing: antialiased;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 4px 20px rgba(155, 61, 18, 0.2); }
+            50% { box-shadow: 0 4px 25px rgba(224, 108, 43, 0.4); }
+            100% { box-shadow: 0 4px 20px rgba(155, 61, 18, 0.2); }
         }
 
         /* ─── Top Bar ─── */
@@ -119,9 +132,23 @@
             padding: 2rem;
         }
 
+        .demo-intro-content > * {
+            opacity: 0;
+            animation: fadeInUp 0.8s var(--ease-out-expo) forwards;
+        }
+
+        .demo-intro-icon { animation-delay: 0.1s; }
+        .demo-intro-title { animation-delay: 0.2s; }
+        .demo-intro-text { animation-delay: 0.3s; }
+        .demo-intro-hints { animation-delay: 0.4s; }
+        .demo-intro-btn { animation-delay: 0.5s; }
+
         .demo-intro-icon {
             font-size: 3rem;
             margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         .demo-intro-title {
@@ -178,12 +205,14 @@
             cursor: pointer;
             box-shadow: 0 4px 20px rgba(155, 61, 18, 0.2);
             transition: all 0.3s var(--ease-out-expo);
+            animation: fadeInUp 0.8s var(--ease-out-expo) forwards, pulseGlow 4s infinite 2s;
         }
 
         .demo-intro-btn:hover {
             background: var(--brand);
             transform: translateY(-2px);
-            box-shadow: 0 8px 32px rgba(224, 108, 43, 0.3);
+            box-shadow: 0 8px 32px rgba(224, 108, 43, 0.4) !important;
+            animation: none;
         }
 
         /* ─── Reading Engine Frame ─── */
@@ -212,7 +241,7 @@
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             transform: translateY(100%);
-            transition: transform 0.6s var(--ease-out-expo);
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
         .demo-bottom-cta.visible {
@@ -256,45 +285,47 @@
 
 <body>
     <!-- Top Bar -->
-    <div class="demo-bar">
+    <header class="demo-bar">
         <div class="demo-bar-left">
             <img src="logo.png" alt="Octopus" class="demo-bar-logo">
             <a href="index.html" class="demo-bar-home">← Back to Home</a>
         </div>
         <div class="demo-bar-badge">Live Demo</div>
-    </div>
+    </header>
 
     <!-- Intro Overlay -->
-    <div class="demo-intro" id="demo-intro">
+    <section class="demo-intro" id="demo-intro">
         <div class="demo-intro-content">
-            <div class="demo-intro-icon">📖</div>
+            <div class="demo-intro-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+            </div>
             <h1 class="demo-intro-title">Welcome to the Reading Engine</h1>
             <p class="demo-intro-text">
                 You're about to read <em>Alice's Adventures in Wonderland</em> 
                 through a new kind of reading experience.
             </p>
             <ul class="demo-intro-hints">
-                <li><span class="hint-icon">👆</span> Tap a sentence to explore it</li>
-                <li><span class="hint-icon">⬇️</span> Pull down for story context</li>
-                <li><span class="hint-icon">⬆️</span> Pull up to see your reflections</li>
-                <li><span class="hint-icon">✍️</span> Long-press to add your own thoughts</li>
+                <li><span class="hint-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m12 16 4-4-4-4"></path><path d="M8 12h8"></path></svg></span> Tap a sentence to explore it</li>
+                <li><span class="hint-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="m19 12-7 7-7-7"></path></svg></span> Pull down for story context</li>
+                <li><span class="hint-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="m5 12 7-7 7 7"></path></svg></span> Pull up to see your reflections</li>
+                <li><span class="hint-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="m15 5 4 4"></path></svg></span> Long-press to add your thoughts</li>
             </ul>
             <button class="demo-intro-btn" id="demo-start-btn" onclick="startDemo()">
                 Begin Reading →
             </button>
         </div>
-    </div>
+    </section>
 
     <!-- Reading Engine (iframe) -->
     <iframe src="engine/reading-engine.html" class="demo-frame" id="demo-frame" title="octopus reading engine demo"></iframe>
 
     <!-- Bottom CTA -->
-    <div class="demo-bottom-cta" id="demo-bottom-cta">
+    <aside class="demo-bottom-cta" id="demo-bottom-cta">
         <span class="demo-bottom-text">Like what you see? We're launching soon.</span>
         <a href="https://omeus.substack.com/subscribe" target="_blank" rel="noopener" class="demo-bottom-link">
             Get Early Access ✉️
         </a>
-    </div>
+    </aside>
 
     <script>
     function startDemo() {

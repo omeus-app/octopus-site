@@ -373,6 +373,111 @@ body {
 }
 
 /* ═══════════════════════════════════════
+   THE MIRROR — Problem in Action
+   ═══════════════════════════════════════ */
+
+.mirror {
+    padding: 5rem 2rem;
+    background: var(--bg);
+}
+
+.mirror-container {
+    max-width: 620px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+}
+
+.mirror-block {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s var(--ease-out-expo), transform 0.8s var(--ease-out-expo);
+}
+
+.mirror-block.revealed {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.mirror-block:nth-child(2) { transition-delay: 0.15s; }
+.mirror-block:nth-child(3) { transition-delay: 0.3s; }
+.mirror-block:nth-child(4) { transition-delay: 0.45s; }
+
+/* ─── Story Text ─── */
+
+.mirror-text {
+    font-family: var(--serif);
+    font-size: 1.15rem;
+    line-height: 1.85;
+    color: var(--ink-soft);
+}
+
+.mirror-text em {
+    color: var(--brand-deep);
+    font-style: italic;
+}
+
+.mirror-text strong {
+    color: var(--ink);
+    font-weight: 500;
+}
+
+.mirror-text-highlight {
+    margin-top: 0.8rem;
+}
+
+/* ─── Poe Blockquote ─── */
+
+.mirror-quote {
+    margin: 0;
+    padding: 2rem 2rem 2rem 2.5rem;
+    border-left: 3px solid var(--brand);
+    background: rgba(224, 108, 43, 0.04);
+    border-radius: 0 8px 8px 0;
+}
+
+.mirror-quote p {
+    font-family: var(--serif);
+    font-size: 1.05rem;
+    line-height: 1.9;
+    color: var(--ink);
+    font-style: italic;
+}
+
+.mirror-quote p + p {
+    margin-top: 1.2rem;
+}
+
+/* ─── Daughter's Quote ─── */
+
+.mirror-daughter {
+    font-family: var(--serif);
+    font-size: 1.2rem;
+    font-style: italic;
+    color: var(--brand);
+    margin: 1rem 0;
+    padding-left: 1rem;
+    border-left: 2px solid var(--brand-glow-strong);
+}
+
+.mirror-daughter em {
+    font-style: italic;
+}
+
+/* ─── Closing Hook ─── */
+
+.mirror-closing {
+    font-family: var(--serif);
+    font-size: 1.3rem;
+    font-weight: 500;
+    font-style: italic;
+    color: var(--brand-deep);
+    margin-top: 1.5rem;
+    letter-spacing: -0.01em;
+}
+
+/* ═══════════════════════════════════════
    SUBSCRIBE SECTION — Unified CTA
    ═══════════════════════════════════════ */
 
@@ -561,6 +666,14 @@ body {
 
     .subscribe-container {
         padding: 2rem 1.5rem;
+    }
+
+    .mirror {
+        padding: 4rem 1.5rem;
+    }
+
+    .mirror-quote {
+        padding: 1.5rem 1.2rem 1.5rem 1.5rem;
     }
 
     .btn {
