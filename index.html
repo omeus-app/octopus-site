@@ -35,6 +35,10 @@
                 <img src="logo.png" alt="Octopus — a friendly octopus reading a book" class="logo-img" id="logo-img">
             </div>
             <h1 class="hero-title" id="hero-title">octopus</h1>
+            <p class="hero-anchor" id="hero-anchor">
+                Reading is the last portal to sustained inner experience.<br>
+                <em>We intend to keep it open.</em>
+            </p>
             <p class="hero-tagline" id="hero-tagline">
                 Wander.<br>
                 Lose track of time.<br>
@@ -158,8 +162,9 @@
                 const elements = [
                     { el: document.getElementById('logo-container'), delay: 0 },
                     { el: document.getElementById('hero-title'), delay: 400 },
-                    { el: document.getElementById('hero-tagline'), delay: 800 },
-                    { el: document.getElementById('scroll-indicator'), delay: 1400 }
+                    { el: document.getElementById('hero-anchor'), delay: 800 },
+                    { el: document.getElementById('hero-tagline'), delay: 1800 },
+                    { el: document.getElementById('scroll-indicator'), delay: 2800 }
                 ];
 
                 elements.forEach(({ el, delay }) => {

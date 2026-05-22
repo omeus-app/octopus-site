@@ -105,6 +105,7 @@ body {
 /* Start hero elements hidden — JS reveals them with staggered delays */
 .logo-container,
 .hero-title,
+.hero-anchor,
 .hero-tagline,
 .hero-ctas,
 .scroll-indicator {
@@ -135,7 +136,22 @@ body {
     font-weight: normal;
     letter-spacing: 0.05em;
     color: var(--brand-deep);
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.hero-anchor {
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    line-height: 1.9;
+    color: var(--ink-ghost);
+    margin-bottom: 2.5rem;
+}
+
+.hero-anchor em {
+    font-style: italic;
+    color: var(--ink-soft);
 }
 
 .hero-tagline {
