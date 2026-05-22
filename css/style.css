@@ -403,6 +403,18 @@ body {
 .mirror-block:nth-child(2) { transition-delay: 0.15s; }
 .mirror-block:nth-child(3) { transition-delay: 0.3s; }
 .mirror-block:nth-child(4) { transition-delay: 0.45s; }
+.mirror-block:nth-child(5) { transition-delay: 0.6s; }
+
+/* ─── Dare ─── */
+
+.mirror-dare {
+    font-family: var(--serif);
+    font-size: 1.6rem;
+    font-weight: 500;
+    font-style: italic;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+}
 
 /* ─── Story Text ─── */
 
@@ -411,6 +423,12 @@ body {
     font-size: 1.15rem;
     line-height: 1.85;
     color: var(--ink-soft);
+}
+
+.mirror-text-pain {
+    margin-top: 1rem;
+    color: var(--ink);
+    font-weight: 500;
 }
 
 .mirror-text em {
