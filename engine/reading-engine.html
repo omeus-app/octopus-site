@@ -505,6 +505,8 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             user-select: none;
         }
+        /* Hide dark mode toggle when embedded in demo iframe */
+        body.in-iframe #theme-toggle-btn { display: none; }
     </style>
     
     <script>
@@ -522,6 +524,7 @@
     
 
 <body>
+<script>if (window.self !== window.top) document.body.classList.add('in-iframe');</script>
 <div id="theme-toggle-btn" onclick="toggleDarkMode()">Dark Mode</div>
 
 
@@ -546,7 +549,6 @@
                     <h2 style="margin-top:36px">Entities Encountered</h2>
                     <ul class="entity-list" id="context-local-entities"></ul>
                 </div>
-            </div>
             </div>
             <div id="base-text-container">
 <p class="atu" data-opus-lineage="86000" data-opus-type="BP" data-wc="12"><span class="sentence">“But she must have a prize herself, you know,” said the Mouse.</span> </p>
