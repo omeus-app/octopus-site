@@ -10,7 +10,7 @@ body.dark {
   --paper: #171208;
   --ink: #E2CDA8;
 }
-html, body { margin: 0; padding: 0; }
+html, body { margin: 0; padding: 0; touch-action: pan-y; }
 body {
   background: var(--paper); color: var(--ink);
   font-family: Georgia, serif;
@@ -204,9 +204,12 @@ p { margin: 0 0 1.1em; }
 
   /* Direct manipulation (owner ask 2026-08-11): two-finger drag moves
      the window up/down; two-finger pinch resizes it continuously.
-     One-finger scroll stays native. preventDefault while two fingers
-     are down keeps Safari's page zoom and two-finger scroll out of
-     the way. */
+     THE CONSTRAINT: one-finger scrolling must never wait on JS — an
+     always-on non-passive touch listener taxes every scroll frame
+     (v3's glitch). So: touch-action pan-y keeps 1-finger pans native
+     and kills native pinch-zoom declaratively; the resting touchstart
+     is PASSIVE; the preventDefault-capable touchmove exists only
+     while two fingers are actually down. */
   var MINL = 1, MAXL = 14;
   function clampLines(v) { return Math.min(MAXL, Math.max(MINL, v)); }
   function clampAnchor(v) { return Math.min(0.85, Math.max(0.14, v)); }
@@ -221,26 +224,30 @@ p { margin: 0 0 1.1em; }
   }
   function midY(t) { return (t[0].clientY + t[1].clientY) / 2; }
 
-  document.addEventListener('touchstart', function (e) {
-    if (e.touches.length !== 2) return;
-    e.preventDefault();
-    if (state.off) { state.off = false; state.linesF = clampLines(fullLines()); }
-    g = { d: dist(e.touches), y: midY(e.touches),
-      lines: state.linesF, anchor: state.anchor };
-  }, { passive: false });
-
-  document.addEventListener('touchmove', function (e) {
+  function activeMove(e) {
     if (!g || e.touches.length !== 2) return;
     e.preventDefault();
     var scale = dist(e.touches) / g.d;
     state.linesF = clampLines(g.lines * scale);
     state.anchor = clampAnchor(g.anchor + (midY(e.touches) - g.y) / window.innerHeight);
     paintBar(); paintVeils();
-  }, { passive: false });
-
-  document.addEventListener('touchend', function (e) {
-    if (e.touches.length < 2) g = null;
-  });
+  }
+  function endGesture(e) {
+    if (e.touches.length >= 2) return;
+    g = null;
+    document.removeEventListener('touchmove', activeMove);
+    document.removeEventListener('touchend', endGesture);
+    document.removeEventListener('touchcancel', endGesture);
+  }
+  document.addEventListener('touchstart', function (e) {
+    if (e.touches.length !== 2) return;
+    if (state.off) { state.off = false; state.linesF = clampLines(fullLines()); }
+    g = { d: dist(e.touches), y: midY(e.touches),
+      lines: state.linesF, anchor: state.anchor };
+    document.addEventListener('touchmove', activeMove, { passive: false });
+    document.addEventListener('touchend', endGesture);
+    document.addEventListener('touchcancel', endGesture);
+  }, { passive: true });
 
   /* Safari fires proprietary gesture events for pinch alongside touch
      events; preventDefault keeps its native page zoom suppressed. */
